@@ -1,10 +1,10 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 import {
     forgotPassword,
     refreshUserToken,
     resetPassword,
-} from '../controllers/authController';
+} from '../controllers/authController.js';
 
 const router = express.Router();
 

@@ -54,13 +54,8 @@ export async function findContacts(req, res) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
-
     try {
         const whereClause = { userId };
-
         if (name) whereClause.name = name;
         if (numberPhone) whereClause.numberPhone = numberPhone;
 

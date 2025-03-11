@@ -1,4 +1,4 @@
-import sequelize from './db';
+import sequelize from './db.js';
 
 const syncDatabase = async () => {
     try {
@@ -14,3 +14,5 @@ const syncDatabase = async () => {
         console.error('Erro ao sincronizar o banco de dados: ', error);
     }
 };
+
+export default syncDatabase;

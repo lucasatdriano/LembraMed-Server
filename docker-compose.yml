@@ -1,0 +1,40 @@
+services:
+    db:
+        image: mysql:8
+        container_name: db_lembraMed
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_PASS}
+            MYSQL_DATABASE: ${DB_NAME}
+            MYSQL_USER: ${DB_USER}
+            MYSQL_PASSWORD: ${DB_PASS}
+        ports:
+            - '3309:3306'
+        volumes:
+            - db_data:/var/lib/mysql
+
+    api:
+        build: .
+        container_name: api_lembraMed
+        restart: always
+        depends_on:
+            - db
+        ports:
+            - '3000:3000'
+        environment:
+            - PORT=${PORT}
+            - DB_HOST=db
+            - DB_USER=${DB_USER}
+            - DB_PASS=${DB_PASS}
+            - DB_NAME=${DB_NAME}
+            - DB_DIALECT=${DB_DIALECT}
+            - JWT_SECRET=${JWT_SECRET}
+            - EMAIL_USER=${EMAIL_USER}
+            - EMAIL_PASS=${EMAIL_PASS}
+            - NODE_ENV=${NODE_ENV}
+        volumes:
+            - .:/app
+        command: sh -c "wait-for db:3306 -- npm run dev"
+
+volumes:
+    db_data:

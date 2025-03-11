@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 import {
     createContact,
     deleteContact,
@@ -7,12 +7,14 @@ import {
     getContactById,
     getContacts,
     updateContact,
-} from '../controllers/contactController';
+} from '../controllers/contactController.js';
 
 const router = express.Router();
 
-router.get('/', authMiddleware, findContacts);
-router.get('/:contactId', authMiddleware, getContactById);
-router.post('/', authMiddleware, createContact);
-router.put('/:contactId', authMiddleware, updateContact);
-router.delete('/:contactId', authMiddleware, deleteContact);
+router.get('/:userId', authMiddleware, findContacts);
+router.get('/:userId/:contactId', authMiddleware, getContactById);
+router.post('/:userId', authMiddleware, createContact);
+router.put('/:userId/:contactId', authMiddleware, updateContact);
+router.delete('/:userId/:contactId', authMiddleware, deleteContact);
+
+export default router;
