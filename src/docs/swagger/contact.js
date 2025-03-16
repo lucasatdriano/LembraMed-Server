@@ -47,24 +47,25 @@
  *           type: string
  *         description: ID do usuário
  *       - in: query
- *         name: name
+ *         name: search
  *         schema:
  *           type: string
- *         description: Nome do contato para filtrar os resultados (opcional).
- *       - in: query
- *         name: numberPhone
- *         schema:
- *           type: string
- *         description: Número de telefone do contato para filtrar os resultados (opcional).
+ *         description: Nome do contato ou número de telefone para filtrar os resultados (opcional).
  *     responses:
  *       200:
- *         description: Lista de contatos retornada com sucesso
+ *         description: Lista de contatos retornada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Contact'
  *       401:
- *         description: Usuário não autenticado
+ *         description: Usuário não autenticado.
  *       404:
- *         description: Usuário não encontrado
+ *         description: Contato não encontrado.
  *       500:
- *         description: Erro ao criar o contato
+ *         description: Erro ao buscar o contato.
  */
 
 /**

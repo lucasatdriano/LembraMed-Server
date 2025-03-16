@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { models } from '../models/index.js';
 
 export async function getContacts(req, res) {
@@ -48,7 +49,7 @@ export async function getContactById(req, res) {
 
 export async function findContacts(req, res) {
     const { userId } = req.params;
-    const { name, numberPhone } = req.query;
+    const { search } = req.query;
 
     if (!req.authenticatedUser) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -56,8 +57,18 @@ export async function findContacts(req, res) {
 
     try {
         const whereClause = { userId };
-        if (name) whereClause.name = name;
-        if (numberPhone) whereClause.numberPhone = numberPhone;
+
+        if (search) {
+            const isNumber = /^\d+$/.test(search);
+
+            whereClause[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }];
+
+            if (isNumber) {
+                whereClause[Op.or].push({
+                    numberPhone: { [Op.iLike]: `%${search}%` },
+                });
+            }
+        }
 
         const contacts = await models.Contact.findAll({ where: whereClause });
 

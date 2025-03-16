@@ -16,7 +16,7 @@ export async function register(req, res) {
             password,
         });
 
-        res.status(201).json(newUser);
+        res.status(201).json(newUser.toJson());
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao cadastrar usuário.',
@@ -69,7 +69,14 @@ export async function getUserById(req, res) {
 
     try {
         const user = await models.User.findByPk(userId, {
-            attributes: ['id', 'name', 'username'],
+            attributes: [
+                'id',
+                'name',
+                'username',
+                'password',
+                'createdAt',
+                'refreshToken',
+            ],
         });
 
         if (!user) {
@@ -83,7 +90,7 @@ export async function getUserById(req, res) {
 }
 
 export async function logoutUser(req, res) {
-    const { userId } = req.body;
+    const { userId } = req.params;
 
     try {
         await models.User.update(

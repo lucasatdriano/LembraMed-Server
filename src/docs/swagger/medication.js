@@ -50,7 +50,7 @@
  * @swagger
  * /medications/{userId}:
  *   get:
- *     summary: Obtém todos os medicamentos de um usuário.
+ *     summary: Obtém todos os medicamentos de um usuário, filtrados por nome ou intervalo de dose.
  *     tags: [Medications]
  *     security:
  *       - BearerAuth: []
@@ -61,6 +61,11 @@
  *         schema:
  *           type: string
  *         description: ID do usuário.
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Nome do medicamento ou intervalo de dose (em horas) para filtrar os resultados. Pode ser utilizado para buscar pelo nome do medicamento ou pelo intervalo de dose, se um número for fornecido.
  *     responses:
  *       200:
  *         description: Lista de medicamentos retornada com sucesso.
@@ -72,6 +77,8 @@
  *                 $ref: '#/components/schemas/Medication'
  *       401:
  *         description: Usuário não autenticado.
+ *       404:
+ *         description: Medicamento não encontrado.
  *       500:
  *         description: Erro ao buscar medicamentos.
  */

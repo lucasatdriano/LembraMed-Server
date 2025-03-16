@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { models } from '../models/index.js';
 
 export async function getMedications(req, res) {
@@ -60,7 +61,7 @@ export async function getMedicationById(req, res) {
 
 export async function findMedications(req, res) {
     const { userId } = req.params;
-    const { name } = req.query;
+    const { search } = req.query;
 
     if (!req.authenticatedUser) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -68,13 +69,27 @@ export async function findMedications(req, res) {
 
     try {
         const whereClause = { userId };
-        if (name) whereClause.name = name;
+
+        if (search) {
+            const numberInSearch = search.match(/\d+/);
+
+            whereClause[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }];
+
+            if (numberInSearch) {
+                whereClause[Op.or].push({
+                    '$DoseIntervals.intervalInHours$': Number(
+                        numberInSearch[0],
+                    ),
+                });
+            }
+        }
 
         const medications = await models.Medication.findAll({
             where: whereClause,
             include: [
                 {
                     model: models.DoseIntervals,
+                    as: 'DoseInterval',
                     attributes: ['intervalInHours'],
                 },
             ],
@@ -88,7 +103,7 @@ export async function findMedications(req, res) {
 
         const response = medications.map((medication) => ({
             ...medication.toJSON(),
-            intervalInHours: medication.DoseInterval.intervalInHours,
+            intervalInHours: medication.DoseInterval?.intervalInHours || null,
         }));
 
         res.json(response);

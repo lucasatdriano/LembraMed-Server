@@ -18,6 +18,9 @@
  *         name:
  *           type: string
  *           description: Nome do usuário.
+ *         username:
+ *           type: string
+ *           description: Username único do usuário.
  *         password:
  *           type: string
  *           description: Senha do usuário.
@@ -27,6 +30,7 @@
  *       example:
  *         id: "12345"
  *         name: "João Silva"
+ *         username: "joaosilva1"
  *         password: "senha123"
  *         refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *
@@ -73,7 +77,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/User'
+ *             $ref: '#/components/schemas/LoginRequest'
  *     responses:
  *       201:
  *         description: Usuário registrado com sucesso

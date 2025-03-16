@@ -13,7 +13,7 @@ export async function generateUniqueUsername(name) {
     let baseUsername = generateBaseUsername(name);
     let count = 1;
 
-    while (await models.User.findOne({ where: { baseUsername } })) {
+    while (await models.User.findOne({ where: { username: baseUsername } })) {
         baseUsername = `${baseUsername}${count}`;
         count++;
     }
