@@ -34,8 +34,11 @@
  *           type: string
  *           description: ID do usuário ao qual o medicamento pertence.
  *         doseIntervalId:
- *           type: string
+ *           type: number
  *           description: ID do intervalo de dose associado ao medicamento.
+ *         intervalInHours:
+ *           type: number
+ *           description: Intervalo de horas entre as doses.
  *       example:
  *         id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  *         name: "Paracetamol"
@@ -43,7 +46,8 @@
  *         periodStart: "2023-10-01"
  *         periodEnd: "2023-10-10"
  *         userId: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
- *         doseIntervalId: "f47ac10b-58cc-4372-a567-0e02b2c3d480"
+ *         doseIntervalId: 1
+ *         intervalInHours: 8
  */
 
 /**
