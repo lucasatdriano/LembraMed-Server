@@ -61,11 +61,11 @@ export async function findContacts(req, res) {
         if (search) {
             const isNumber = /^\d+$/.test(search);
 
-            whereClause[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }];
+            whereClause[Op.or] = [{ name: { [Op.like]: `%${search}%` } }];
 
             if (isNumber) {
                 whereClause[Op.or].push({
-                    numberPhone: { [Op.iLike]: `%${search}%` },
+                    numberPhone: { [Op.like]: `%${search}%` },
                 });
             }
         }

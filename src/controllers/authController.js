@@ -93,6 +93,10 @@ export async function refreshUserToken(req, res) {
 
         const decoded = jwt.verify(refreshToken, secret);
 
+        if (decoded.exp && decoded.exp < Date.now() / 1000) {
+            return res.status(403).json({ error: 'Refresh token expirado' });
+        }
+
         const user = await models.User.findByPk(decoded.id);
 
         if (!user || user.refreshToken !== refreshToken) {
@@ -107,7 +111,15 @@ export async function refreshUserToken(req, res) {
             { expiresIn: '1h' },
         );
 
-        res.json({ accessToken });
+        const newRefreshToken = jwt.sign(
+            { id: decoded.id, email: decoded.email },
+            secret,
+            { expiresIn: '7d' },
+        );
+
+        await user.update({ refreshToken: newRefreshToken });
+
+        res.json({ accessToken, refreshToken: newRefreshToken });
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao gerar novo token',

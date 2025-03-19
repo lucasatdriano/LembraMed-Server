@@ -37,6 +37,7 @@ models.Medication.associate = (models) => {
     models.Medication.belongsTo(models.User, { foreignKey: 'userId' });
     models.Medication.belongsTo(models.DoseIntervals, {
         foreignKey: 'doseIntervalId',
+        as: 'doseInterval',
     });
 };
 

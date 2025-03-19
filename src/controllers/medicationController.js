@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Sequelize, Op } from 'sequelize';
 import { models } from '../models/index.js';
 
 export async function getMedications(req, res) {
@@ -34,6 +34,7 @@ export async function getMedicationById(req, res) {
             include: [
                 {
                     model: models.DoseIntervals,
+                    as: 'doseInterval',
                     attributes: ['intervalInHours'],
                 },
             ],
@@ -45,9 +46,21 @@ export async function getMedicationById(req, res) {
                 .json({ error: 'Medicamento não encontrado' });
         }
 
+        if (!medication.doseInterval) {
+            return res.status(404).json({
+                error: 'Intervalo de dose não encontrado para este medicamento.',
+            });
+        }
+
         const response = {
-            ...medication.toJSON(),
-            intervalInHours: medication.DoseInterval.intervalInHours,
+            id: medication.id,
+            name: medication.name,
+            hourFirstDose: medication.hourFirstDose,
+            periodStart: medication.periodStart,
+            periodEnd: medication.periodEnd,
+            userId: medication.userId,
+            doseIntervalId: medication.doseIntervalId,
+            intervalInHours: medication.doseInterval.intervalInHours,
         };
 
         res.json(response);
@@ -71,17 +84,18 @@ export async function findMedications(req, res) {
         const whereClause = { userId };
 
         if (search) {
-            const numberInSearch = search.match(/\d+/);
+            const orConditions = [{ name: { [Op.like]: `%${search}%` } }];
 
-            whereClause[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }];
-
-            if (numberInSearch) {
-                whereClause[Op.or].push({
-                    '$DoseIntervals.intervalInHours$': Number(
-                        numberInSearch[0],
+            if (!isNaN(Number(search))) {
+                orConditions.push(
+                    Sequelize.where(
+                        Sequelize.col('doseInterval.intervalInHours'),
+                        Number(search),
                     ),
-                });
+                );
             }
+
+            whereClause[Op.or] = orConditions;
         }
 
         const medications = await models.Medication.findAll({
@@ -89,7 +103,7 @@ export async function findMedications(req, res) {
             include: [
                 {
                     model: models.DoseIntervals,
-                    as: 'DoseInterval',
+                    as: 'doseInterval',
                     attributes: ['intervalInHours'],
                 },
             ],
@@ -101,10 +115,7 @@ export async function findMedications(req, res) {
                 .json({ error: 'Medicamento não encontrado' });
         }
 
-        const response = medications.map((medication) => ({
-            ...medication.toJSON(),
-            intervalInHours: medication.DoseInterval?.intervalInHours || null,
-        }));
+        const response = medications.map((medication) => medication.toJSON());
 
         res.json(response);
     } catch (error) {
@@ -121,7 +132,7 @@ export async function createMedication(req, res) {
         req.body;
 
     try {
-        const doseInterval = await models.DoseIntervals.findOne({
+        let doseInterval = await models.DoseIntervals.findOne({
             where: { intervalInHours },
         });
 
