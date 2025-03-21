@@ -179,18 +179,24 @@ export async function updateMedication(req, res) {
 
         medication.name = name || medication.name;
         medication.hourFirstDose = hourFirstDose || medication.hourFirstDose;
-        medication.periodStart = periodStart || medication.periodStart;
-        medication.periodEnd = periodEnd || medication.periodEnd;
+
+        if (periodStart && !isNaN(new Date(periodStart).getTime())) {
+            medication.periodStart = periodStart;
+        }
+
+        if (periodEnd && !isNaN(new Date(periodEnd).getTime())) {
+            medication.periodEnd = periodEnd;
+        }
 
         if (intervalInHours) {
-            const doseInterval = await models.DoseIntervals.findOne({
+            let doseInterval = await models.DoseIntervals.findOne({
                 where: { intervalInHours: intervalInHours },
             });
 
             if (!doseInterval) {
-                return res
-                    .status(404)
-                    .json({ error: 'Intervalo de dose não encontrado.' });
+                doseInterval = await models.DoseIntervals.create({
+                    intervalInHours,
+                });
             }
 
             medication.doseIntervalId = doseInterval.id;
