@@ -1,14 +1,13 @@
 import { DataTypes } from 'sequelize';
-import { v4 as uuidv4 } from 'uuid';
 
 export default (sequelize) => {
     const Medication = sequelize.define(
-        'tbMedications',
+        'tbmedications',
         {
             id: {
                 type: DataTypes.UUID,
                 primaryKey: true,
-                defaultValue: uuidv4,
+                defaultValue: DataTypes.UUIDV4,
             },
             name: {
                 type: DataTypes.STRING,
@@ -17,38 +16,50 @@ export default (sequelize) => {
             hourFirstDose: {
                 type: DataTypes.TIME,
                 allowNull: false,
+                field: 'hourfirstdose',
+            },
+            hourNextDose: {
+                type: DataTypes.TIME,
+                allowNull: false,
+                field: 'hournextdose',
             },
             periodStart: {
                 type: DataTypes.DATE,
                 allowNull: true,
+                field: 'periodstart',
             },
             periodEnd: {
                 type: DataTypes.DATE,
                 allowNull: true,
+                field: 'periodend',
             },
             doseIntervalId: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: 'tbDoseIntervals',
+                    model: 'tbdoseintervals',
                     key: 'id',
                 },
+                field: 'doseintervalid',
             },
             userId: {
                 type: DataTypes.UUID,
                 allowNull: false,
                 references: {
-                    model: 'tbUsers',
+                    model: 'tbusers',
                     key: 'id',
                 },
+                field: 'userid',
             },
             createdAt: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
+                field: 'createdat',
             },
         },
         {
             timestamps: false,
+            tableName: 'tbmedications',
         },
     );
 

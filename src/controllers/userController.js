@@ -74,8 +74,8 @@ export async function getUserById(req, res) {
                 'name',
                 'username',
                 'password',
-                'createdAt',
-                'refreshToken',
+                'createdat',
+                'refreshtoken',
             ],
         });
 

@@ -13,31 +13,35 @@ const models = {
 
 models.User.associate = (models) => {
     models.User.hasMany(models.Medication, {
-        foreignKey: 'userId',
+        foreignKey: 'userid',
         as: 'medications',
     });
     models.User.hasMany(models.Contact, {
-        foreignKey: 'userId',
+        foreignKey: 'userid',
         as: 'contacts',
     });
 };
 
 models.Contact.associate = (models) => {
-    models.Contact.belongsTo(models.User, { foreignKey: 'userId' });
+    models.Contact.belongsTo(models.User, {
+        foreignKey: 'userid',
+    });
 };
 
 models.DoseIntervals.associate = (models) => {
     models.DoseIntervals.hasMany(models.Medication, {
-        foreignKey: 'doseIntervalId',
+        foreignKey: 'doseintervalid',
         as: 'medications',
     });
 };
 
 models.Medication.associate = (models) => {
-    models.Medication.belongsTo(models.User, { foreignKey: 'userId' });
+    models.Medication.belongsTo(models.User, {
+        foreignKey: 'userid',
+    });
     models.Medication.belongsTo(models.DoseIntervals, {
-        foreignKey: 'doseIntervalId',
-        as: 'doseInterval',
+        foreignKey: 'doseintervalid',
+        as: 'doseinterval',
     });
 };
 

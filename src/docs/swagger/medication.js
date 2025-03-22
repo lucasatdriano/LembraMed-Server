@@ -207,7 +207,7 @@
  *             properties:
  *               name:
  *                 type: string
- *               hourFirstDose:
+ *               hourNextDose:
  *                 type: string
  *                 format: time
  *               periodStart:

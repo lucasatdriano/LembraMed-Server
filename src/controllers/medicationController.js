@@ -1,5 +1,6 @@
 import { Sequelize, Op } from 'sequelize';
 import { models } from '../models/index.js';
+import { calculateNextDose } from '../utils/calculateNextDose.js';
 
 export async function getMedications(req, res) {
     const { userId } = req.params;
@@ -34,8 +35,8 @@ export async function getMedicationById(req, res) {
             include: [
                 {
                     model: models.DoseIntervals,
-                    as: 'doseInterval',
-                    attributes: ['intervalInHours'],
+                    as: 'doseinterval',
+                    attributes: ['intervalinhours'],
                 },
             ],
         });
@@ -103,8 +104,8 @@ export async function findMedications(req, res) {
             include: [
                 {
                     model: models.DoseIntervals,
-                    as: 'doseInterval',
-                    attributes: ['intervalInHours'],
+                    as: 'doseinterval',
+                    attributes: ['intervalinhours'],
                 },
             ],
         });
@@ -142,6 +143,8 @@ export async function createMedication(req, res) {
             });
         }
 
+        const hourNextDose = calculateNextDose(hourFirstDose, intervalInHours);
+
         const newMedication = await models.Medication.create({
             name,
             hourFirstDose,
@@ -149,6 +152,7 @@ export async function createMedication(req, res) {
             periodEnd,
             userId,
             doseIntervalId: doseInterval.id,
+            hourNextDose,
         });
 
         res.status(201).json({
@@ -165,11 +169,18 @@ export async function createMedication(req, res) {
 
 export async function updateMedication(req, res) {
     const { userId, medicationId } = req.params;
-    const { name, hourFirstDose, periodStart, periodEnd, intervalInHours } =
-        req.body;
+    const { name, periodStart, periodEnd, intervalInHours } = req.body;
 
     try {
-        const medication = await models.Medication.findByPk(medicationId);
+        const medication = await models.Medication.findByPk(medicationId, {
+            include: [
+                {
+                    model: models.DoseIntervals,
+                    as: 'doseinterval',
+                    attributes: ['intervalinhours'],
+                },
+            ],
+        });
 
         if (!medication || medication.userId !== userId) {
             return res
@@ -178,7 +189,7 @@ export async function updateMedication(req, res) {
         }
 
         medication.name = name || medication.name;
-        medication.hourFirstDose = hourFirstDose || medication.hourFirstDose;
+        medication.hourNextDose = hourNextDose || medication.hourNextDose;
 
         if (periodStart && !isNaN(new Date(periodStart).getTime())) {
             medication.periodStart = periodStart;
@@ -200,6 +211,28 @@ export async function updateMedication(req, res) {
             }
 
             medication.doseIntervalId = doseInterval.id;
+
+            const now = new Date();
+            const createdAt = new Date(medication.createdAt);
+            const isSameDay = now.toDateString() === createdAt.toDateString();
+
+            const lastDoseTime = new Date();
+            const [lastDoseHours, lastDoseMinutes] = medication.hourNextDose
+                .split(':')
+                .map(Number);
+            lastDoseTime.setHours(lastDoseHours, lastDoseMinutes, 0, 0);
+
+            if (isSameDay && now <= lastDoseTime) {
+                medication.hourNextDose = calculateNextDose(
+                    medication.hourFirstDose,
+                    intervalInHours,
+                );
+            } else {
+                medication.hourNextDose = calculateNextDose(
+                    medication.hourNextDose,
+                    intervalInHours,
+                );
+            }
         }
 
         await medication.save();

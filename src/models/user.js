@@ -1,14 +1,13 @@
 import { DataTypes } from 'sequelize';
-import { v4 as uuidv4 } from 'uuid';
 
 export default (sequelize) => {
     const User = sequelize.define(
-        'tbUsers',
+        'tbusers',
         {
             id: {
                 type: DataTypes.UUID,
                 primaryKey: true,
-                defaultValue: uuidv4,
+                defaultValue: DataTypes.UUIDV4,
             },
             name: {
                 type: DataTypes.STRING,
@@ -24,16 +23,19 @@ export default (sequelize) => {
                 allowNull: false,
             },
             refreshToken: {
-                type: DataTypes.STRING,
+                type: DataTypes.TEXT,
                 allowNull: true,
+                field: 'refreshtoken',
             },
             createdAt: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
+                field: 'createdat',
             },
         },
         {
             timestamps: false,
+            tableName: 'tbusers',
         },
     );
 

@@ -31,7 +31,7 @@ export async function getContactById(req, res) {
 
     try {
         const contact = await models.Contact.findByPk(contactId, {
-            attributes: ['id', 'name', 'numberPhone'],
+            attributes: ['id', 'name', 'numberphone'],
         });
 
         if (!contact) {

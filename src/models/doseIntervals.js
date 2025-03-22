@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
     const DoseIntervals = sequelize.define(
-        'tbDoseIntervals',
+        'tbdoseintervals',
         {
             id: {
                 type: DataTypes.INTEGER,
@@ -16,14 +16,17 @@ export default (sequelize) => {
                 validate: {
                     min: 1,
                 },
+                field: 'intervalinhours',
             },
             createdAt: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
+                field: 'createdat',
             },
         },
         {
             timestamps: false,
+            tableName: 'tbdoseintervals',
         },
     );
 
