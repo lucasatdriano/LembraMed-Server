@@ -24,7 +24,7 @@ app.use('/medications', medicationRoutes);
 setupSwagger(app);
 syncDatabase();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     try {
         await sequelize.authenticate();
