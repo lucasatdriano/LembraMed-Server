@@ -13,12 +13,12 @@ export default (sequelize) => {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            numberPhone: {
+            numberphone: {
                 type: DataTypes.STRING,
                 allowNull: false,
                 field: 'numberphone',
             },
-            userId: {
+            userid: {
                 type: DataTypes.UUID,
                 allowNull: false,
                 references: {
@@ -27,7 +27,7 @@ export default (sequelize) => {
                 },
                 field: 'userid',
             },
-            createdAt: {
+            createdat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
                 field: 'createdat',

@@ -2,7 +2,7 @@ import { Op } from 'sequelize';
 import { models } from '../models/index.js';
 
 export async function getContacts(req, res) {
-    const { userId } = req.params;
+    const { userid } = req.params;
 
     if (!req.authenticatedUser) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -10,7 +10,7 @@ export async function getContacts(req, res) {
 
     try {
         const contacts = await models.Contact.findAll({
-            where: { userId: userId },
+            where: { userid: userid },
         });
 
         res.json(contacts);
@@ -23,7 +23,7 @@ export async function getContacts(req, res) {
 }
 
 export async function getContactById(req, res) {
-    const { userId, contactId } = req.params;
+    const { userid, contactId } = req.params;
 
     if (!req.authenticatedUser) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -48,7 +48,7 @@ export async function getContactById(req, res) {
 }
 
 export async function findContacts(req, res) {
-    const { userId } = req.params;
+    const { userid } = req.params;
     const { search } = req.query;
 
     if (!req.authenticatedUser) {
@@ -56,7 +56,7 @@ export async function findContacts(req, res) {
     }
 
     try {
-        const whereClause = { userId };
+        const whereClause = { userid };
 
         if (search) {
             const isNumber = /^\d+$/.test(search);
@@ -65,7 +65,7 @@ export async function findContacts(req, res) {
 
             if (isNumber) {
                 whereClause[Op.or].push({
-                    numberPhone: { [Op.like]: `%${search}%` },
+                    numberphone: { [Op.like]: `%${search}%` },
                 });
             }
         }
@@ -86,14 +86,14 @@ export async function findContacts(req, res) {
 }
 
 export async function createContact(req, res) {
-    const { userId } = req.params;
-    const { name, numberPhone } = req.body;
+    const { userid } = req.params;
+    const { name, numberphone } = req.body;
 
     try {
         const newContact = await models.Contact.create({
             name,
-            numberPhone,
-            userId,
+            numberphone,
+            userid,
         });
 
         res.status(201).json(newContact);
@@ -106,18 +106,18 @@ export async function createContact(req, res) {
 }
 
 export async function updateContact(req, res) {
-    const { userId, contactId } = req.params;
-    const { name, numberPhone } = req.body;
+    const { userid, contactId } = req.params;
+    const { name, numberphone } = req.body;
 
     try {
         const contact = await models.Contact.findByPk(contactId);
 
-        if (!contact || contact.userId !== userId) {
+        if (!contact || contact.userid !== userid) {
             return res.status(404).json({ error: 'Contato não encontrado.' });
         }
 
         contact.name = name || contact.name;
-        contact.numberPhone = numberPhone || contact.numberPhone;
+        contact.numberphone = numberphone || contact.numberphone;
 
         await contact.save();
 
@@ -131,12 +131,12 @@ export async function updateContact(req, res) {
 }
 
 export async function deleteContact(req, res) {
-    const { userId, contactId } = req.params;
+    const { userid, contactId } = req.params;
 
     try {
         const contact = await models.Contact.findByPk(contactId);
 
-        if (!contact || contact.userId !== userId) {
+        if (!contact || contact.userid !== userid) {
             return res.status(404).json({
                 error: 'Contato não encontrado.',
             });

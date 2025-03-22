@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.get('/:userId', authMiddleware, findMedications);
-router.get('/:userId/:medicationId', authMiddleware, getMedicationById);
-router.post('/:userId', authMiddleware, createMedication);
-router.put('/:userId/:medicationId', authMiddleware, updateMedication);
-router.delete('/:userId/:medicationId', authMiddleware, deleteMedication);
+router.get('/:userid', authMiddleware, findMedications);
+router.get('/:userid/:medicationId', authMiddleware, getMedicationById);
+router.post('/:userid', authMiddleware, createMedication);
+router.put('/:userid/:medicationId', authMiddleware, updateMedication);
+router.delete('/:userid/:medicationId', authMiddleware, deleteMedication);
 
 export default router;

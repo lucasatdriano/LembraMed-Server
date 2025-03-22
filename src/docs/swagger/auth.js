@@ -41,11 +41,11 @@
  *     RefreshToken:
  *       type: object
  *       properties:
- *         refreshToken:
+ *         refreshtoken:
  *           type: string
  *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       required:
- *         - refreshToken
+ *         - refreshtoken
  */
 
 /**
@@ -108,10 +108,10 @@
 
 /**
  * @swagger
- * /auth/refreshToken:
+ * /auth/refreshtoken:
  *   post:
- *     summary: Atualiza o accessToken usando um refreshToken válido
- *     description: Gera um novo accessToken usando o refreshToken fornecido.
+ *     summary: Atualiza o accesstoken usando um refreshtoken válido
+ *     description: Gera um novo accesstoken usando o refreshtoken fornecido.
  *     tags: [Auth]
  *     security:
  *       - BearerAuth: []
@@ -123,7 +123,7 @@
  *             $ref: '#/components/schemas/RefreshToken'
  *     responses:
  *       200:
- *         description: Novo accessToken gerado com sucesso
+ *         description: Novo accesstoken gerado com sucesso
  *       401:
  *         description: Refresh token não fornecido ou inválido
  *       403:

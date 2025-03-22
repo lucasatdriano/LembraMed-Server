@@ -1,4 +1,4 @@
-export function calculateNextDose(lastDoseTime, intervalInHours) {
+export function calculateNextDose(lastDoseTime, intervalinhours) {
     const [hours, minutes] = lastDoseTime.split(':').map(Number);
     const date = new Date();
     date.setHours(hours);
@@ -6,7 +6,7 @@ export function calculateNextDose(lastDoseTime, intervalInHours) {
     date.setSeconds(0);
     date.setMilliseconds(0);
 
-    date.setHours(date.getHours() + intervalInHours);
+    date.setHours(date.getHours() + intervalinhours);
 
     return date.toTimeString().slice(0, 5);
 }

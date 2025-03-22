@@ -18,41 +18,51 @@
  *         name:
  *           type: string
  *           description: Nome do medicamento.
- *         hourFirstDose:
+ *         hourfirstdose:
  *           type: string
  *           format: time
  *           description: Hora da primeira dose do medicamento.
- *         periodStart:
+ *         hournextdose:
+ *           type: string
+ *           format: time
+ *           description: Hora da próxima dose do medicamento.
+ *         periodstart:
  *           type: string
  *           format: date
  *           description: Data de início do período de uso do medicamento.
- *         periodEnd:
+ *         periodend:
  *           type: string
  *           format: date
  *           description: Data de término do período de uso do medicamento.
- *         userId:
+ *         createdat:
+ *           type: string
+ *           format: date
+ *           description: Data de criação do medicamento.
+ *         userid:
  *           type: string
  *           description: ID do usuário ao qual o medicamento pertence.
- *         doseIntervalId:
+ *         doseintervalid:
  *           type: number
  *           description: ID do intervalo de dose associado ao medicamento.
- *         intervalInHours:
+ *         intervalinhours:
  *           type: number
  *           description: Intervalo de horas entre as doses.
  *       example:
  *         id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  *         name: "Paracetamol"
- *         hourFirstDose: "08:00"
- *         periodStart: "2023-10-01"
- *         periodEnd: "2023-10-10"
- *         userId: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
- *         doseIntervalId: 1
- *         intervalInHours: 8
+ *         hourfirstdose: "08:00"
+ *         hournextdose: "16:00"
+ *         periodstart: "2025-10-01"
+ *         periodend: "2025-10-10"
+ *         createdat: "2025-10-01"
+ *         userid: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
+ *         doseintervalid: 1
+ *         intervalinhours: 8
  */
 
 /**
  * @swagger
- * /medications/{userId}:
+ * /medications/{userid}:
  *   get:
  *     summary: Obtém todos os medicamentos de um usuário, filtrados por nome ou intervalo de dose.
  *     tags: [Medications]
@@ -60,7 +70,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -89,7 +99,7 @@
 
 /**
  * @swagger
- * /medications/{userId}/{medicationId}:
+ * /medications/{userid}/{medicationId}:
  *   get:
  *     summary: Obtém um único medicamento pelo ID.
  *     tags: [Medications]
@@ -97,7 +107,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -125,7 +135,7 @@
 
 /**
  * @swagger
- * /medications/{userId}:
+ * /medications/{userid}:
  *   post:
  *     summary: Cria um novo medicamento.
  *     tags: [Medications]
@@ -133,7 +143,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -147,23 +157,23 @@
  *             properties:
  *               name:
  *                 type: string
- *               hourFirstDose:
+ *               hourfirstdose:
  *                 type: string
  *                 format: time
- *               periodStart:
+ *               periodstart:
  *                 type: string
  *                 format: date
- *               periodEnd:
+ *               periodend:
  *                 type: string
  *                 format: date
- *               intervalInHours:
+ *               intervalinhours:
  *                 type: number
  *             required:
  *               - name
- *               - hourFirstDose
- *               - periodStart
- *               - periodEnd
- *               - intervalInHours
+ *               - hourfirstdose
+ *               - periodstart
+ *               - periodend
+ *               - intervalinhours
  *     responses:
  *       201:
  *         description: Medicamento criado com sucesso.
@@ -179,7 +189,7 @@
 
 /**
  * @swagger
- * /medications/{userId}/{medicationId}:
+ * /medications/{userid}/{medicationId}:
  *   put:
  *     summary: Atualiza um medicamento existente.
  *     tags: [Medications]
@@ -187,7 +197,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -207,16 +217,16 @@
  *             properties:
  *               name:
  *                 type: string
- *               hourNextDose:
+ *               hournextdose:
  *                 type: string
  *                 format: time
- *               periodStart:
+ *               periodstart:
  *                 type: string
  *                 format: date
- *               periodEnd:
+ *               periodend:
  *                 type: string
  *                 format: date
- *               intervalInHours:
+ *               intervalinhours:
  *                 type: number
  *     responses:
  *       200:
@@ -235,7 +245,7 @@
 
 /**
  * @swagger
- * /medications/{userId}/{medicationId}:
+ * /medications/{userid}/{medicationId}:
  *   delete:
  *     summary: Deleta um medicamento.
  *     tags: [Medications]
@@ -243,7 +253,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string

@@ -22,12 +22,12 @@ export default (sequelize) => {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            refreshToken: {
+            refreshtoken: {
                 type: DataTypes.TEXT,
                 allowNull: true,
                 field: 'refreshtoken',
             },
-            createdAt: {
+            createdat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
                 field: 'createdat',

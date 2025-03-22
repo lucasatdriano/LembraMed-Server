@@ -18,22 +18,22 @@
  *         name:
  *           type: string
  *           description: Nome do contato.
- *         numberPhone:
+ *         numberphone:
  *           type: string
  *           description: Número de telefone do contato.
- *         userId:
+ *         userid:
  *           type: string
  *           description: ID do usuário ao qual o contato pertence.
  *       example:
  *         id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  *         name: "João Silva"
- *         numberPhone: "11987654321"
- *         userId: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
+ *         numberphone: "11987654321"
+ *         userid: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
  */
 
 /**
  * @swagger
- * /contacts/{userId}:
+ * /contacts/{userid}:
  *   get:
  *     summary: Obtém contatos de um usuário, filtrados por nome ou número de telefone.
  *     tags: [Contacts]
@@ -41,7 +41,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -70,7 +70,7 @@
 
 /**
  * @swagger
- * /contacts/{userId}/{contactId}:
+ * /contacts/{userid}/{contactId}:
  *   get:
  *     summary: Obtém um único contato pelo ID
  *     tags: [Contacts]
@@ -78,7 +78,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -102,7 +102,7 @@
 
 /**
  * @swagger
- * /contacts/{userId}:
+ * /contacts/{userid}:
  *   post:
  *     summary: Cria um novo contato
  *     tags: [Contacts]
@@ -110,7 +110,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -124,7 +124,7 @@
  *             properties:
  *               name:
  *                 type: string
- *               numberPhone:
+ *               numberphone:
  *                 type: string
  *     responses:
  *       201:
@@ -139,7 +139,7 @@
 
 /**
  * @swagger
- * /contacts/{userId}/{contactId}:
+ * /contacts/{userid}/{contactId}:
  *   put:
  *     summary: Atualiza um contato existente
  *     tags: [Contacts]
@@ -147,7 +147,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string
@@ -167,7 +167,7 @@
  *             properties:
  *               name:
  *                 type: string
- *               numberPhone:
+ *               numberphone:
  *                 type: string
  *     responses:
  *       200:
@@ -182,7 +182,7 @@
 
 /**
  * @swagger
- * /contacts/{userId}/{contactId}:
+ * /contacts/{userid}/{contactId}:
  *   delete:
  *     summary: Deleta um contato
  *     tags: [Contacts]
@@ -190,7 +190,7 @@
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: userid
  *         required: true
  *         schema:
  *           type: string

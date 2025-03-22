@@ -16,7 +16,7 @@ export async function register(req, res) {
             password,
         });
 
-        res.status(201).json(newUser.toJson());
+        res.status(201).json(newUser);
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao cadastrar usuário.',
@@ -44,18 +44,18 @@ export async function login(req, res) {
             return res.status(401).json({ error: 'Senha incorreta!' });
         }
 
-        const userId = user.id;
-        const accessToken = jwt.sign({ id: userId, name: user.name }, secret, {
-            expiresIn: '1h',
+        const userid = user.id;
+        const accesstoken = jwt.sign({ id: userid, name: user.name }, secret, {
+            expiresIn: '24h',
         });
-        const refreshToken = jwt.sign({ id: userId, name: user.name }, secret, {
+        const refreshtoken = jwt.sign({ id: userid, name: user.name }, secret, {
             expiresIn: '30d',
         });
 
-        user.refreshToken = refreshToken;
+        user.refreshtoken = refreshtoken;
         await user.save();
 
-        res.json({ id: userId, accessToken, refreshToken });
+        res.json({ id: userid, accesstoken, refreshtoken });
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao fazer login.',
@@ -65,10 +65,10 @@ export async function login(req, res) {
 }
 
 export async function getUserById(req, res) {
-    const { userId } = req.params;
+    const { userid } = req.params;
 
     try {
-        const user = await models.User.findByPk(userId, {
+        const user = await models.User.findByPk(userid, {
             attributes: [
                 'id',
                 'name',
@@ -90,12 +90,12 @@ export async function getUserById(req, res) {
 }
 
 export async function logoutUser(req, res) {
-    const { userId } = req.params;
+    const { userid } = req.params;
 
     try {
         await models.User.update(
-            { refreshToken: null },
-            { where: { id: userId } },
+            { refreshtoken: null },
+            { where: { id: userid } },
         );
 
         res.json({ message: 'Usuário deslogado com sucesso' });

@@ -9,7 +9,7 @@ export default (sequelize) => {
                 primaryKey: true,
                 autoIncrement: true,
             },
-            intervalInHours: {
+            intervalinhours: {
                 type: DataTypes.SMALLINT,
                 unique: true,
                 allowNull: false,
@@ -18,7 +18,7 @@ export default (sequelize) => {
                 },
                 field: 'intervalinhours',
             },
-            createdAt: {
+            createdat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
                 field: 'createdat',

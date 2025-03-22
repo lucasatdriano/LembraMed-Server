@@ -13,27 +13,27 @@ export default (sequelize) => {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            hourFirstDose: {
+            hourfirstdose: {
                 type: DataTypes.TIME,
                 allowNull: false,
                 field: 'hourfirstdose',
             },
-            hourNextDose: {
+            hournextdose: {
                 type: DataTypes.TIME,
                 allowNull: false,
                 field: 'hournextdose',
             },
-            periodStart: {
+            periodstart: {
                 type: DataTypes.DATE,
                 allowNull: true,
                 field: 'periodstart',
             },
-            periodEnd: {
+            periodend: {
                 type: DataTypes.DATE,
                 allowNull: true,
                 field: 'periodend',
             },
-            doseIntervalId: {
+            doseintervalid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
@@ -42,7 +42,7 @@ export default (sequelize) => {
                 },
                 field: 'doseintervalid',
             },
-            userId: {
+            userid: {
                 type: DataTypes.UUID,
                 allowNull: false,
                 references: {
@@ -51,7 +51,7 @@ export default (sequelize) => {
                 },
                 field: 'userid',
             },
-            createdAt: {
+            createdat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
                 field: 'createdat',

@@ -3,7 +3,7 @@ import { models } from '../models/index.js';
 import { calculateNextDose } from '../utils/calculateNextDose.js';
 
 export async function getMedications(req, res) {
-    const { userId } = req.params;
+    const { userid } = req.params;
 
     if (!req.authenticatedUser) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -11,7 +11,7 @@ export async function getMedications(req, res) {
 
     try {
         const medications = await models.Medication.findAll({
-            where: { userId: userId },
+            where: { userid: userid },
         });
 
         res.json(medications);
@@ -24,7 +24,7 @@ export async function getMedications(req, res) {
 }
 
 export async function getMedicationById(req, res) {
-    const { userId, medicationId } = req.params;
+    const { userid, medicationId } = req.params;
 
     if (!req.authenticatedUser) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
@@ -41,30 +41,19 @@ export async function getMedicationById(req, res) {
             ],
         });
 
-        if (!medication || medication.userId !== userId) {
+        if (!medication || medication.userid !== userid) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
 
-        if (!medication.doseInterval) {
+        if (!medication.doseinterval) {
             return res.status(404).json({
                 error: 'Intervalo de dose não encontrado para este medicamento.',
             });
         }
 
-        const response = {
-            id: medication.id,
-            name: medication.name,
-            hourFirstDose: medication.hourFirstDose,
-            periodStart: medication.periodStart,
-            periodEnd: medication.periodEnd,
-            userId: medication.userId,
-            doseIntervalId: medication.doseIntervalId,
-            intervalInHours: medication.doseInterval.intervalInHours,
-        };
-
-        res.json(response);
+        res.json(medication);
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao buscar medicamento.',
@@ -74,7 +63,7 @@ export async function getMedicationById(req, res) {
 }
 
 export async function findMedications(req, res) {
-    const { userId } = req.params;
+    const { userid } = req.params;
     const { search } = req.query;
 
     if (!req.authenticatedUser) {
@@ -82,7 +71,7 @@ export async function findMedications(req, res) {
     }
 
     try {
-        const whereClause = { userId };
+        const whereClause = { userid };
 
         if (search) {
             const orConditions = [{ name: { [Op.like]: `%${search}%` } }];
@@ -90,7 +79,7 @@ export async function findMedications(req, res) {
             if (!isNaN(Number(search))) {
                 orConditions.push(
                     Sequelize.where(
-                        Sequelize.col('doseInterval.intervalInHours'),
+                        Sequelize.col('doseinterval.intervalinhours'),
                         Number(search),
                     ),
                 );
@@ -128,36 +117,36 @@ export async function findMedications(req, res) {
 }
 
 export async function createMedication(req, res) {
-    const { userId } = req.params;
-    const { name, hourFirstDose, periodStart, periodEnd, intervalInHours } =
+    const { userid } = req.params;
+    const { name, hourfirstdose, periodstart, periodend, intervalinhours } =
         req.body;
 
     try {
         let doseInterval = await models.DoseIntervals.findOne({
-            where: { intervalInHours },
+            where: { intervalinhours },
         });
 
         if (!doseInterval) {
             doseInterval = await models.DoseIntervals.create({
-                intervalInHours,
+                intervalinhours,
             });
         }
 
-        const hourNextDose = calculateNextDose(hourFirstDose, intervalInHours);
+        const hournextdose = calculateNextDose(hourfirstdose, intervalinhours);
 
         const newMedication = await models.Medication.create({
             name,
-            hourFirstDose,
-            periodStart,
-            periodEnd,
-            userId,
-            doseIntervalId: doseInterval.id,
-            hourNextDose,
+            hourfirstdose,
+            periodstart,
+            periodend,
+            userid,
+            doseintervalid: doseInterval.id,
+            hournextdose,
         });
 
         res.status(201).json({
             medication: newMedication,
-            intervalInHours: doseInterval.intervalInHours,
+            intervalinhours: doseInterval.intervalinhours,
         });
     } catch (error) {
         res.status(500).json({
@@ -168,8 +157,9 @@ export async function createMedication(req, res) {
 }
 
 export async function updateMedication(req, res) {
-    const { userId, medicationId } = req.params;
-    const { name, periodStart, periodEnd, intervalInHours } = req.body;
+    const { userid, medicationId } = req.params;
+    const { name, hournextdose, periodstart, periodend, intervalinhours } =
+        req.body;
 
     try {
         const medication = await models.Medication.findByPk(medicationId, {
@@ -182,55 +172,55 @@ export async function updateMedication(req, res) {
             ],
         });
 
-        if (!medication || medication.userId !== userId) {
+        if (!medication || medication.userid !== userid) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
         }
 
         medication.name = name || medication.name;
-        medication.hourNextDose = hourNextDose || medication.hourNextDose;
+        medication.hournextdose = hournextdose || medication.hournextdose;
 
-        if (periodStart && !isNaN(new Date(periodStart).getTime())) {
-            medication.periodStart = periodStart;
+        if (periodstart && !isNaN(new Date(periodstart).getTime())) {
+            medication.periodstart = periodstart;
         }
 
-        if (periodEnd && !isNaN(new Date(periodEnd).getTime())) {
-            medication.periodEnd = periodEnd;
+        if (periodend && !isNaN(new Date(periodend).getTime())) {
+            medication.periodend = periodend;
         }
 
-        if (intervalInHours) {
+        if (intervalinhours) {
             let doseInterval = await models.DoseIntervals.findOne({
-                where: { intervalInHours: intervalInHours },
+                where: { intervalinhours: intervalinhours },
             });
 
             if (!doseInterval) {
                 doseInterval = await models.DoseIntervals.create({
-                    intervalInHours,
+                    intervalinhours,
                 });
             }
 
-            medication.doseIntervalId = doseInterval.id;
+            medication.doseintervalid = doseInterval.id;
 
             const now = new Date();
-            const createdAt = new Date(medication.createdAt);
-            const isSameDay = now.toDateString() === createdAt.toDateString();
+            const createdat = new Date(medication.createdat);
+            const isSameDay = now.toDateString() === createdat.toDateString();
 
             const lastDoseTime = new Date();
-            const [lastDoseHours, lastDoseMinutes] = medication.hourNextDose
+            const [lastDoseHours, lastDoseMinutes] = medication.hournextdose
                 .split(':')
                 .map(Number);
             lastDoseTime.setHours(lastDoseHours, lastDoseMinutes, 0, 0);
 
             if (isSameDay && now <= lastDoseTime) {
-                medication.hourNextDose = calculateNextDose(
-                    medication.hourFirstDose,
-                    intervalInHours,
+                medication.hournextdose = calculateNextDose(
+                    medication.hourfirstdose,
+                    intervalinhours,
                 );
             } else {
-                medication.hourNextDose = calculateNextDose(
-                    medication.hourNextDose,
-                    intervalInHours,
+                medication.hournextdose = calculateNextDose(
+                    medication.hournextdose,
+                    intervalinhours,
                 );
             }
         }
@@ -247,12 +237,12 @@ export async function updateMedication(req, res) {
 }
 
 export async function deleteMedication(req, res) {
-    const { userId, medicationId } = req.params;
+    const { userid, medicationId } = req.params;
 
     try {
         const medication = await models.Medication.findByPk(medicationId);
 
-        if (!medication || medication.userId !== userId) {
+        if (!medication || medication.userid !== userid) {
             return res.status(404).json({
                 error: 'Medicamento não encontrado.',
             });
