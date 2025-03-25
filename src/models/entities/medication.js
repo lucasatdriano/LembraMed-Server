@@ -33,6 +33,12 @@ export default (sequelize) => {
                 allowNull: true,
                 field: 'periodend',
             },
+            status: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                field: 'status',
+            },
             doseintervalid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,

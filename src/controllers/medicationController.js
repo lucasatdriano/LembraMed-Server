@@ -139,6 +139,7 @@ export async function createMedication(req, res) {
             hourfirstdose,
             periodstart,
             periodend,
+            status: false,
             userid,
             doseintervalid: doseInterval.id,
             hournextdose,
@@ -180,6 +181,7 @@ export async function updateMedication(req, res) {
 
         medication.name = name || medication.name;
         medication.hournextdose = hournextdose || medication.hournextdose;
+        medication.status = status || medication.status;
 
         if (periodstart && !isNaN(new Date(periodstart).getTime())) {
             medication.periodstart = periodstart;
@@ -231,6 +233,63 @@ export async function updateMedication(req, res) {
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao atualizar medicamento.',
+            details: error.message,
+        });
+    }
+}
+
+export async function updateMedicationStatus(req, res) {
+    const { userid, medicationId } = req.params;
+    const { status } = req.body;
+
+    if (typeof status !== 'boolean') {
+        return res
+            .status(400)
+            .json({ error: 'Status inválido. Deve ser booleano.' });
+    }
+
+    try {
+        const medication = await models.Medication.findByPk(medicationId);
+
+        if (!medication || medication.userid !== userid) {
+            return res
+                .status(404)
+                .json({ error: 'Medicamento não encontrado.' });
+        }
+
+        medication.status = status;
+        await medication.save();
+
+        if (status) {
+            setTimeout(async () => {
+                const updatedMedication = await models.Medication.findByPk(
+                    medicationId,
+                );
+                if (updatedMedication && updatedMedication.status) {
+                    await models.MedicationHistory.create({
+                        medicationid: updatedMedication.id,
+                        takendate: new Date(),
+                    });
+
+                    updatedMedication.status = false;
+                    await updatedMedication.save();
+                    console.log(
+                        `Histórico criado e status resetado para o medicamento ${updatedMedication.name}`,
+                    );
+                } else {
+                    console.log(
+                        'Status revertido antes do tempo. Histórico não criado.',
+                    );
+                }
+            }, 29 * 60 * 1000); // 29 minutos
+        }
+
+        res.status(200).json({
+            message: `Status do medicamento ${medication.name} atualizado para ${status}`,
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Erro ao atualizar o status do medicamento.',
             details: error.message,
         });
     }

@@ -8,6 +8,11 @@
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     BearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *   schemas:
  *     Medication:
  *       type: object
@@ -34,6 +39,9 @@
  *           type: string
  *           format: date
  *           description: Data de término do período de uso do medicamento.
+ *         status:
+ *           type: boolean
+ *           description: Status para saber se o remédio foi tomado
  *         createdat:
  *           type: string
  *           format: date
@@ -54,6 +62,7 @@
  *         hournextdose: "16:00"
  *         periodstart: "2025-10-01"
  *         periodend: "2025-10-10"
+ *         status: false
  *         createdat: "2025-10-01"
  *         userid: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
  *         doseintervalid: 1
@@ -241,6 +250,54 @@
  *         description: Medicamento não encontrado.
  *       500:
  *         description: Erro ao atualizar o medicamento.
+ */
+
+/**
+ * @swagger
+ * /medications/{userid}/{medicationId}/status:
+ *   patch:
+ *     summary: Marca o medicamento como tomado, registra o histórico e agenda o reset do status.
+ *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário.
+ *       - in: path
+ *         name: medicationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do medicamento.
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Medicamento marcado como tomado com sucesso. Histórico registrado e reset programado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 nextReset:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Usuário não autenticado.
+ *       404:
+ *         description: Medicamento não encontrado.
+ *       500:
+ *         description: Erro ao marcar o medicamento como tomado.
  */
 
 /**
