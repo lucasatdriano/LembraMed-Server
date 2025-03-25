@@ -1,3 +1,5 @@
+import { DataTypes } from 'sequelize';
+
 export default (sequelize) => {
     const Session = sequelize.define(
         'tbsessions',
