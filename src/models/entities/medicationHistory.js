@@ -18,16 +18,21 @@ export default (sequelize) => {
                 },
                 field: 'medicationid',
             },
+            taken: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                field: 'taken',
+            },
             takendate: {
                 type: DataTypes.DATE,
                 allowNull: false,
                 defaultValue: sequelize.fn('NOW'),
                 field: 'takendate',
             },
-            taken: {
-                type: DataTypes.BOOLEAN,
-                allowNull: false,
-                field: 'taken',
+            createdat: {
+                type: DataTypes.DATE,
+                defaultValue: sequelize.fn('NOW'),
+                field: 'createdat',
             },
         },
         {
