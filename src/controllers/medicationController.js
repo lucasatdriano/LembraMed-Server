@@ -116,6 +116,24 @@ export async function findMedications(req, res) {
     }
 }
 
+export async function getMedicationHistory(req, res) {
+    const { medicationId } = req.params;
+
+    try {
+        const history = await models.MedicationHistory.findAll({
+            where: { medicationId },
+            order: [['createdat', 'DESC']],
+        });
+
+        res.status(200).json(history);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Erro ao buscar o histórico do medicamento.',
+            details: error.message,
+        });
+    }
+}
+
 export async function createMedication(req, res) {
     const { userid } = req.params;
     const { name, hourfirstdose, periodstart, periodend, intervalinhours } =

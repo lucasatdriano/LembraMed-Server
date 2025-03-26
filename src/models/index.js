@@ -24,17 +24,17 @@ models.User.associate = (models) => {
         foreignKey: 'userid',
         as: 'contacts',
     });
-    models.User.hasMany(models.Session, {
-        foreignKey: 'userid',
-        as: 'sessions',
-    });
+    // models.User.hasMany(models.Session, {
+    //     foreignKey: 'userid',
+    //     as: 'sessions',
+    // });
 };
 
-models.Session.associate = (models) => {
-    models.Session.belongsTo(models.User, {
-        foreignKey: 'userid',
-    });
-};
+// models.Session.associate = (models) => {
+//     models.Session.belongsTo(models.User, {
+//         foreignKey: 'userid',
+//     });
+// };
 
 models.Contact.associate = (models) => {
     models.Contact.belongsTo(models.User, {
