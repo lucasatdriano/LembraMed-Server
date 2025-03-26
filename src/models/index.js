@@ -8,7 +8,6 @@ import initMedicationHistory from './entities/medicationHistory.js';
 
 const models = {
     User: initUser(sequelize),
-    Session: initSession(sequelize),
     Contact: initContact(sequelize),
     Medication: initMedication(sequelize),
     DoseIntervals: initDoseIntervals(sequelize),
@@ -24,11 +23,12 @@ models.User.associate = (models) => {
         foreignKey: 'userid',
         as: 'contacts',
     });
-    // models.User.hasMany(models.Session, {
-    //     foreignKey: 'userid',
-    //     as: 'sessions',
-    // });
 };
+
+// models.User.hasMany(models.Session, {
+//     foreignKey: 'userid',
+//     as: 'sessions',
+// });
 
 // models.Session.associate = (models) => {
 //     models.Session.belongsTo(models.User, {
