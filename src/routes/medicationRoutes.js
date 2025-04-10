@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+// import { authMiddleware } from '../middleware/authMiddleware.js';
 import {
     createMedication,
     findMedications,
@@ -11,15 +11,11 @@ import {
 
 const router = express.Router();
 
-router.get('/:userid', authMiddleware, findMedications);
-router.get('/:userid/:medicationId', authMiddleware, getMedicationById);
-router.post('/:userid', authMiddleware, createMedication);
-router.put('/:userid/:medicationId', authMiddleware, updateMedication);
-router.put(
-    '/:userid/:medicationId/status',
-    authMiddleware,
-    updateMedicationStatus,
-);
-router.delete('/:userid/:medicationId', authMiddleware, deleteMedication);
+router.get('/:userid', findMedications);
+router.get('/:userid/:medicationId', getMedicationById);
+router.post('/:userid', createMedication);
+router.put('/:userid/:medicationId', updateMedication);
+router.put('/:userid/:medicationId/status', updateMedicationStatus);
+router.delete('/:userid/:medicationId', deleteMedication);
 
 export default router;

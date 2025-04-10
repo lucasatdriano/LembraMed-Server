@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+// import { authMiddleware } from '../middleware/authMiddleware.js';
 import {
     forgotPassword,
     refreshUserToken,
@@ -10,6 +10,6 @@ const router = express.Router();
 
 router.post('/forgotPassword', forgotPassword);
 router.put('/resetPassword', resetPassword);
-router.post('/refreshtoken', authMiddleware, refreshUserToken);
+router.post('/refreshtoken', refreshUserToken);
 
 export default router;

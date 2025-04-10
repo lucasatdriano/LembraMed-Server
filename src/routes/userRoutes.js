@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+// import { authMiddleware } from '../middleware/authMiddleware.js';
 import {
     getUserById,
     login,
@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
-router.get('/:userid', authMiddleware, getUserById);
-router.post('/:userid/logout', authMiddleware, logoutUser);
+router.get('/:userid', getUserById);
+router.post('/:userid/logout', logoutUser);
 
 export default router;
