@@ -84,8 +84,8 @@ export async function resetPassword(req, res) {
 export async function refreshUserToken(req, res) {
     const { refreshtoken } = req.body;
 
-    if (!refreshtoken)
-        return res.status(401).json({ error: 'Refresh token não fornecido' });
+    // if (!refreshtoken)
+    //     return res.status(401).json({ error: 'Refresh token não fornecido' });
 
     try {
         const secret = process.env.JWT_SECRET;

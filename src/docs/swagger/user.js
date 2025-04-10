@@ -118,8 +118,6 @@
  *     summary: Obtém os detalhes de um usuário
  *     description: Retorna informações do usuário com base no ID fornecido.
  *     tags: [User]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -147,8 +145,6 @@
  *     summary: Realiza logout do usuário
  *     description: Remove o refreshtoken do usuário, efetivando o logout.
  *     tags: [User]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid

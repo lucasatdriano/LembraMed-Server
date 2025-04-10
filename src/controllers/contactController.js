@@ -4,9 +4,9 @@ import { models } from '../models/index.js';
 export async function getContacts(req, res) {
     const { userid } = req.params;
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
+    // if (!req.authenticatedUser) {
+    //     return res.status(401).json({ error: 'Usuário não autenticado.' });
+    // }
 
     try {
         const contacts = await models.Contact.findAll({
@@ -25,9 +25,9 @@ export async function getContacts(req, res) {
 export async function getContactById(req, res) {
     const { userid, contactId } = req.params;
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
+    // if (!req.authenticatedUser) {
+    //     return res.status(401).json({ error: 'Usuário não autenticado.' });
+    // }
 
     try {
         const contact = await models.Contact.findByPk(contactId, {
@@ -51,9 +51,9 @@ export async function findContacts(req, res) {
     const { userid } = req.params;
     const { search } = req.query;
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
+    // if (!req.authenticatedUser) {
+    //     return res.status(401).json({ error: 'Usuário não autenticado.' });
+    // }
 
     try {
         const whereClause = { userid };

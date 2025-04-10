@@ -8,11 +8,6 @@
 /**
  * @swagger
  * components:
- *   securitySchemes:
- *     BearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
  *   schemas:
  *     Medication:
  *       type: object
@@ -75,8 +70,6 @@
  *   get:
  *     summary: Obtém todos os medicamentos de um usuário, filtrados por nome ou intervalo de dose.
  *     tags: [Medications]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -112,8 +105,6 @@
  *   get:
  *     summary: Obtém um único medicamento pelo ID.
  *     tags: [Medications]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -148,8 +139,6 @@
  *   post:
  *     summary: Cria um novo medicamento.
  *     tags: [Medications]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -202,8 +191,6 @@
  *   put:
  *     summary: Atualiza um medicamento existente.
  *     tags: [Medications]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -258,8 +245,6 @@
  *   patch:
  *     summary: Marca o medicamento como tomado, registra o histórico e agenda o reset do status.
  *     tags: [Medications]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -306,8 +291,6 @@
  *   delete:
  *     summary: Deleta um medicamento.
  *     tags: [Medications]
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid

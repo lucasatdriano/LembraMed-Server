@@ -29,8 +29,12 @@ app.listen(PORT, async () => {
     try {
         await sequelize.authenticate();
         console.log('🛜  Conectado ao banco de dados com sucesso!');
-        // console.log('🚀 Servidor rodando em http://localhost:3000');
-        // console.log('📄 Documentação Swagger: http://localhost:3000/api-docs');
+        console.log(
+            '🚀 Servidor rodando em https://lembramed-server.onrender.com',
+        );
+        console.log(
+            '📄 Documentação Swagger: https://lembramed-server.onrender.com/api-docs',
+        );
     } catch (err) {
         console.error('Erro ao conectar ao banco de dados: ', err);
     }

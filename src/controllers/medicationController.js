@@ -5,9 +5,9 @@ import { calculateNextDose } from '../utils/calculateNextDose.js';
 export async function getMedications(req, res) {
     const { userid } = req.params;
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
+    // if (!req.authenticatedUser) {
+    //     return res.status(401).json({ error: 'Usuário não autenticado.' });
+    // }
 
     try {
         const medications = await models.Medication.findAll({
@@ -26,9 +26,9 @@ export async function getMedications(req, res) {
 export async function getMedicationById(req, res) {
     const { userid, medicationId } = req.params;
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
+    // if (!req.authenticatedUser) {
+    //     return res.status(401).json({ error: 'Usuário não autenticado.' });
+    // }
 
     try {
         const medication = await models.Medication.findByPk(medicationId, {
@@ -66,9 +66,9 @@ export async function findMedications(req, res) {
     const { userid } = req.params;
     const { search } = req.query;
 
-    if (!req.authenticatedUser) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
-    }
+    // if (!req.authenticatedUser) {
+    //     return res.status(401).json({ error: 'Usuário não autenticado.' });
+    // }
 
     try {
         const whereClause = { userid };

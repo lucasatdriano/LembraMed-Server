@@ -55,8 +55,6 @@
  *     summary: Solicitar redefinição de senha
  *     description: Envia um e-mail com um link para redefinir a senha do usuário.
  *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -79,8 +77,6 @@
  *     summary: Redefinir senha
  *     description: Permite ao usuário redefinir sua senha usando um token válido.
  *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -113,8 +109,6 @@
  *     summary: Atualiza o accesstoken usando um refreshtoken válido
  *     description: Gera um novo accesstoken usando o refreshtoken fornecido.
  *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:

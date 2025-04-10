@@ -21,15 +21,15 @@ const options = {
                 description: 'Servidor Local',
             },
         ],
-        components: {
-            securitySchemes: {
-                BearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT',
-                },
-            },
-        },
+        // components: {
+        //     securitySchemes: {
+        //         BearerAuth: {
+        //             type: 'http',
+        //             scheme: 'bearer',
+        //             bearerFormat: 'JWT',
+        //         },
+        //     },
+        // },
     },
     apis: [path.join(__dirname, '../docs/swagger/*.js')],
 };
