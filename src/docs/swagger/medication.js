@@ -220,7 +220,7 @@
 /**
  * @swagger
  * /medications/{userid}/{medicationId}/missed:
- *   patch:
+ *   post:
  *     summary: Registra uma dose não tomada.
  *     tags: [Medications]
  *     parameters:
