@@ -117,9 +117,17 @@ export async function findMedications(req, res) {
 }
 
 export async function getMedicationHistory(req, res) {
-    const { medicationId } = req.params;
+    const { userid, medicationId } = req.params;
 
     try {
+        const medication = await models.Medication.findByPk(medicationId);
+
+        if (!medication || medication.userid !== userid) {
+            return res
+                .status(404)
+                .json({ error: 'Medicamento não encontrado' });
+        }
+
         const history = await models.MedicationHistory.findAll({
             where: { medicationId },
             order: [['createdat', 'DESC']],
@@ -175,10 +183,45 @@ export async function createMedication(req, res) {
     }
 }
 
+export async function registerMissedDose(req, res) {
+    const { userid, medicationId } = req.params;
+
+    try {
+        const medication = await models.Medication.findByPk(medicationId);
+
+        if (!medication || medication.userid !== userid) {
+            return res
+                .status(404)
+                .json({ error: 'Medicamento não encontrado.' });
+        }
+
+        await models.MedicationHistory.create({
+            medicationid: medicationId,
+            takendate: new Date(),
+            taken: false,
+        });
+
+        res.status(200).json({
+            message: 'Dose não tomada registrada no histórico',
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Erro ao registrar dose não tomada',
+            details: error.message,
+        });
+    }
+}
+
 export async function updateMedication(req, res) {
     const { userid, medicationId } = req.params;
-    const { name, hournextdose, periodstart, periodend, intervalinhours } =
-        req.body;
+    const {
+        name,
+        hournextdose,
+        periodstart,
+        periodend,
+        intervalinhours,
+        status,
+    } = req.body;
 
     try {
         const medication = await models.Medication.findByPk(medicationId, {
@@ -260,12 +303,6 @@ export async function updateMedicationStatus(req, res) {
     const { userid, medicationId } = req.params;
     const { status } = req.body;
 
-    if (typeof status !== 'boolean') {
-        return res
-            .status(400)
-            .json({ error: 'Status inválido. Deve ser booleano.' });
-    }
-
     try {
         const medication = await models.Medication.findByPk(medicationId);
 
@@ -283,23 +320,32 @@ export async function updateMedicationStatus(req, res) {
                 const updatedMedication = await models.Medication.findByPk(
                     medicationId,
                 );
+
                 if (updatedMedication && updatedMedication.status) {
                     await models.MedicationHistory.create({
-                        medicationid: updatedMedication.id,
+                        medicationid: medicationId,
                         takendate: new Date(),
+                        taken: true,
                     });
 
+                    const [hours, mins] = updatedMedication.hournextdose
+                        .split(':')
+                        .map(Number);
+                    const nextDose = new Date();
+                    nextDose.setHours(
+                        hours + updatedMedication.doseinterval.intervalinhours,
+                        mins,
+                    );
+
+                    updatedMedication.hournextdose = `${String(
+                        nextDose.getHours(),
+                    ).padStart(2, '0')}:${String(
+                        nextDose.getMinutes(),
+                    ).padStart(2, '0')}`;
                     updatedMedication.status = false;
                     await updatedMedication.save();
-                    console.log(
-                        `Histórico criado e status resetado para o medicamento ${updatedMedication.name}`,
-                    );
-                } else {
-                    console.log(
-                        'Status revertido antes do tempo. Histórico não criado.',
-                    );
                 }
-            }, 29 * 60 * 1000); // 29 minutos
+            }, 10 * 60 * 1000); // 10 minutos
         }
 
         res.status(200).json({

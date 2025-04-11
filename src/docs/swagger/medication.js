@@ -135,6 +135,38 @@
 
 /**
  * @swagger
+ * /medications/{userid}/{medicationId}/history:
+ *   get:
+ *     summary: Obtém o histórico de doses de um medicamento.
+ *     tags: [Medications]
+ *     parameters:
+ *       - in: path
+ *         name: medicationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do medicamento.
+ *     responses:
+ *       200:
+ *         description: Histórico retornado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   takendate:
+ *                     type: string
+ *                     format: date-time
+ *                   taken:
+ *                     type: boolean
+ *       500:
+ *         description: Erro ao buscar o histórico do medicamento.
+ */
+
+/**
+ * @swagger
  * /medications/{userid}:
  *   post:
  *     summary: Cria um novo medicamento.
@@ -183,6 +215,32 @@
  *         description: Usuário não autenticado.
  *       500:
  *         description: Erro ao criar o medicamento.
+ */
+
+/**
+ * @swagger
+ * /medications/{userid}/{medicationId}/missed:
+ *   patch:
+ *     summary: Registra uma dose não tomada.
+ *     tags: [Medications]
+ *     parameters:
+ *       - in: path
+ *         name: userid
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: medicationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Dose não tomada registrada com sucesso.
+ *       404:
+ *         description: Medicamento não encontrado.
+ *       500:
+ *         description: Erro ao registrar dose não tomada.
  */
 
 /**
@@ -243,7 +301,7 @@
  * @swagger
  * /medications/{userid}/{medicationId}/status:
  *   patch:
- *     summary: Marca o medicamento como tomado, registra o histórico e agenda o reset do status.
+ *     summary: Atualiza o status de um medicamento (tomado ou não).
  *     tags: [Medications]
  *     parameters:
  *       - in: path
@@ -251,38 +309,27 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
  *       - in: path
  *         name: medicationId
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do medicamento.
  *     requestBody:
- *       required: false
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               status:
+ *                 type: boolean
  *     responses:
  *       200:
- *         description: Medicamento marcado como tomado com sucesso. Histórico registrado e reset programado.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 nextReset:
- *                   type: string
- *                   format: date-time
- *       401:
- *         description: Usuário não autenticado.
+ *         description: Status atualizado com sucesso.
  *       404:
  *         description: Medicamento não encontrado.
  *       500:
- *         description: Erro ao marcar o medicamento como tomado.
+ *         description: Erro ao atualizar o status do medicamento.
  */
 
 /**
