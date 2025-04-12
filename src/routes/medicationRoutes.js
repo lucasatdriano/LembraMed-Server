@@ -19,7 +19,7 @@ router.get('/:userid/:medicationId/history', getMedicationHistory);
 router.post('/:userid', createMedication);
 router.post('/:userid/:medicationId/missed', registerMissedDose);
 router.put('/:userid/:medicationId', updateMedication);
-router.patch('/:userid/:medicationId/status', updateMedicationStatus);
+router.put('/:userid/:medicationId/status', updateMedicationStatus);
 router.delete('/:userid/:medicationId', deleteMedication);
 
 export default router;

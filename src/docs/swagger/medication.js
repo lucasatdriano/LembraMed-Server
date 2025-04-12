@@ -306,7 +306,7 @@
 /**
  * @swagger
  * /medications/{userid}/{medicationId}/status:
- *   patch:
+ *   put:
  *     summary: Atualiza o status de um medicamento (tomado ou não).
  *     tags: [Medications]
  *     parameters:
