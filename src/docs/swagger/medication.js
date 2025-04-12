@@ -141,6 +141,12 @@
  *     tags: [Medications]
  *     parameters:
  *       - in: path
+ *         name: userid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário.
+ *       - in: path
  *         name: medicationId
  *         required: true
  *         schema:
