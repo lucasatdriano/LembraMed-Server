@@ -117,19 +117,19 @@ export async function findMedications(req, res) {
 }
 
 export async function getMedicationHistory(req, res) {
-    const { userid, medicationId } = req.params;
+    const { userId, medicationId } = req.params;
 
     try {
         const medication = await models.Medication.findByPk(medicationId);
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication || medication.userid !== userId) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
 
         const history = await models.MedicationHistory.findAll({
-            where: { medicationId },
+            where: { medicationid: medicationId },
             order: [['createdat', 'DESC']],
         });
 
@@ -184,12 +184,12 @@ export async function createMedication(req, res) {
 }
 
 export async function registerMissedDose(req, res) {
-    const { userid, medicationId } = req.params;
+    const { userId, medicationId } = req.params;
 
     try {
         const medication = await models.Medication.findByPk(medicationId);
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication || medication.userid !== userId) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
@@ -300,13 +300,13 @@ export async function updateMedication(req, res) {
 }
 
 export async function updateMedicationStatus(req, res) {
-    const { userid, medicationId } = req.params;
+    const { userId, medicationId } = req.params;
     const { status } = req.body;
 
     try {
         const medication = await models.Medication.findByPk(medicationId);
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication || medication.userid !== userId) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
