@@ -14,12 +14,12 @@ import {
 const router = express.Router();
 
 router.get('/:userid', findMedications);
-router.get('/:userid/:medicationId', getMedicationById);
-router.get('/:userid/:medicationId/history', getMedicationHistory);
+router.get('/:userid/:medicationid', getMedicationById);
+router.get('/:userid/:medicationid/history', getMedicationHistory);
 router.post('/:userid', createMedication);
-router.post('/:userid/:medicationId/missed', registerMissedDose);
-router.put('/:userid/:medicationId', updateMedication);
-router.put('/:userid/:medicationId/status', updateMedicationStatus);
-router.delete('/:userid/:medicationId', deleteMedication);
+router.post('/:userid/:medicationid/missed', registerMissedDose);
+router.put('/:userid/:medicationid', updateMedication);
+router.put('/:userid/:medicationid/status', updateMedicationStatus);
+router.delete('/:userid/:medicationid', deleteMedication);
 
 export default router;

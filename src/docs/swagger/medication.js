@@ -101,7 +101,7 @@
 
 /**
  * @swagger
- * /medications/{userid}/{medicationId}:
+ * /medications/{userid}/{medicationid}:
  *   get:
  *     summary: Obtém um único medicamento pelo ID.
  *     tags: [Medications]
@@ -113,7 +113,7 @@
  *           type: string
  *         description: ID do usuário.
  *       - in: path
- *         name: medicationId
+ *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
@@ -135,7 +135,7 @@
 
 /**
  * @swagger
- * /medications/{userid}/{medicationId}/history:
+ * /medications/{userid}/{medicationid}/history:
  *   get:
  *     summary: Obtém o histórico de doses de um medicamento.
  *     tags: [Medications]
@@ -147,7 +147,7 @@
  *           type: string
  *         description: ID do usuário.
  *       - in: path
- *         name: medicationId
+ *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
@@ -225,7 +225,7 @@
 
 /**
  * @swagger
- * /medications/{userid}/{medicationId}/missed:
+ * /medications/{userid}/{medicationid}/missed:
  *   post:
  *     summary: Registra uma dose não tomada.
  *     tags: [Medications]
@@ -236,7 +236,7 @@
  *         schema:
  *           type: string
  *       - in: path
- *         name: medicationId
+ *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
@@ -251,7 +251,7 @@
 
 /**
  * @swagger
- * /medications/{userid}/{medicationId}:
+ * /medications/{userid}/{medicationid}:
  *   put:
  *     summary: Atualiza um medicamento existente.
  *     tags: [Medications]
@@ -263,7 +263,7 @@
  *           type: string
  *         description: ID do usuário.
  *       - in: path
- *         name: medicationId
+ *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
@@ -305,7 +305,7 @@
 
 /**
  * @swagger
- * /medications/{userid}/{medicationId}/status:
+ * /medications/{userid}/{medicationid}/status:
  *   put:
  *     summary: Atualiza o status de um medicamento (tomado ou não).
  *     tags: [Medications]
@@ -316,7 +316,7 @@
  *         schema:
  *           type: string
  *       - in: path
- *         name: medicationId
+ *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
@@ -340,7 +340,7 @@
 
 /**
  * @swagger
- * /medications/{userid}/{medicationId}:
+ * /medications/{userid}/{medicationid}:
  *   delete:
  *     summary: Deleta um medicamento.
  *     tags: [Medications]
@@ -352,7 +352,7 @@
  *           type: string
  *         description: ID do usuário.
  *       - in: path
- *         name: medicationId
+ *         name: medicationid
  *         required: true
  *         schema:
  *           type: string

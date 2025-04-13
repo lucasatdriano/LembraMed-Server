@@ -24,14 +24,14 @@ export async function getMedications(req, res) {
 }
 
 export async function getMedicationById(req, res) {
-    const { userid, medicationId } = req.params;
+    const { userid, medicationid } = req.params;
 
     // if (!req.authenticatedUser) {
     //     return res.status(401).json({ error: 'Usuário não autenticado.' });
     // }
 
     try {
-        const medication = await models.Medication.findByPk(medicationId, {
+        const medication = await models.Medication.findByPk(medicationid, {
             include: [
                 {
                     model: models.DoseIntervals,
@@ -117,19 +117,19 @@ export async function findMedications(req, res) {
 }
 
 export async function getMedicationHistory(req, res) {
-    const { userId, medicationId } = req.params;
+    const { userid, medicationid } = req.params;
 
     try {
-        const medication = await models.Medication.findByPk(medicationId);
+        const medication = await models.Medication.findByPk(medicationid);
 
-        if (!medication || medication.userid !== userId) {
+        if (!medication || medication.userid !== userid) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
 
         const history = await models.MedicationHistory.findAll({
-            where: { medicationid: medicationId },
+            where: { medicationid: medicationid },
             order: [['createdat', 'DESC']],
         });
 
@@ -184,19 +184,19 @@ export async function createMedication(req, res) {
 }
 
 export async function registerMissedDose(req, res) {
-    const { userId, medicationId } = req.params;
+    const { userid, medicationid } = req.params;
 
     try {
-        const medication = await models.Medication.findByPk(medicationId);
+        const medication = await models.Medication.findByPk(medicationid);
 
-        if (!medication || medication.userid !== userId) {
+        if (!medication || medication.userid !== userid) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
         }
 
         await models.MedicationHistory.create({
-            medicationid: medicationId,
+            medicationid: medicationid,
             takendate: new Date(),
             taken: false,
         });
@@ -213,7 +213,7 @@ export async function registerMissedDose(req, res) {
 }
 
 export async function updateMedication(req, res) {
-    const { userid, medicationId } = req.params;
+    const { userid, medicationid } = req.params;
     const {
         name,
         hournextdose,
@@ -224,7 +224,7 @@ export async function updateMedication(req, res) {
     } = req.body;
 
     try {
-        const medication = await models.Medication.findByPk(medicationId, {
+        const medication = await models.Medication.findByPk(medicationid, {
             include: [
                 {
                     model: models.DoseIntervals,
@@ -300,13 +300,13 @@ export async function updateMedication(req, res) {
 }
 
 export async function updateMedicationStatus(req, res) {
-    const { userId, medicationId } = req.params;
+    const { userid, medicationid } = req.params;
     const { status } = req.body;
 
     try {
-        const medication = await models.Medication.findByPk(medicationId);
+        const medication = await models.Medication.findByPk(medicationid);
 
-        if (!medication || medication.userid !== userId) {
+        if (!medication || medication.userid !== userid) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
@@ -318,12 +318,12 @@ export async function updateMedicationStatus(req, res) {
         if (status) {
             setTimeout(async () => {
                 const updatedMedication = await models.Medication.findByPk(
-                    medicationId,
+                    medicationid,
                 );
 
                 if (updatedMedication && updatedMedication.status) {
                     await models.MedicationHistory.create({
-                        medicationid: medicationId,
+                        medicationid: medicationid,
                         takendate: new Date(),
                         taken: true,
                     });
@@ -360,10 +360,10 @@ export async function updateMedicationStatus(req, res) {
 }
 
 export async function deleteMedication(req, res) {
-    const { userid, medicationId } = req.params;
+    const { userid, medicationid } = req.params;
 
     try {
-        const medication = await models.Medication.findByPk(medicationId);
+        const medication = await models.Medication.findByPk(medicationid);
 
         if (!medication || medication.userid !== userid) {
             return res.status(404).json({
