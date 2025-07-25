@@ -23,18 +23,14 @@ export async function getContacts(req, res) {
 }
 
 export async function getContactById(req, res) {
-    const { userid, contactId } = req.params;
+    const { userid, contactid } = req.params;
 
     // if (!req.authenticatedUser) {
     //     return res.status(401).json({ error: 'Usuário não autenticado.' });
     // }
 
     try {
-        const contact = await models.Contact.findOne({
-            where: {
-                id: contactId,
-                userid: userid,
-            },
+        const contact = await models.Contact.findByPk(contactid, {
             attributes: ['id', 'name', 'numberphone'],
         });
 
@@ -110,11 +106,11 @@ export async function createContact(req, res) {
 }
 
 export async function updateContact(req, res) {
-    const { userid, contactId } = req.params;
+    const { userid, contactid } = req.params;
     const { name, numberphone } = req.body;
 
     try {
-        const contact = await models.Contact.findByPk(contactId);
+        const contact = await models.Contact.findByPk(contactid);
 
         if (!contact || contact.userid !== userid) {
             return res.status(404).json({ error: 'Contato não encontrado.' });
@@ -135,10 +131,10 @@ export async function updateContact(req, res) {
 }
 
 export async function deleteContact(req, res) {
-    const { userid, contactId } = req.params;
+    const { userid, contactid } = req.params;
 
     try {
-        const contact = await models.Contact.findByPk(contactId);
+        const contact = await models.Contact.findByPk(contactid);
 
         if (!contact || contact.userid !== userid) {
             return res.status(404).json({
