@@ -30,7 +30,11 @@ export async function getContactById(req, res) {
     // }
 
     try {
-        const contact = await models.Contact.findByPk(contactId, {
+        const contact = await models.Contact.findOne({
+            where: {
+                id: contactId,
+                userid: userid,
+            },
             attributes: ['id', 'name', 'numberphone'],
         });
 
