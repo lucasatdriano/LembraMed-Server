@@ -38,19 +38,37 @@
  *       required:
  *         - newPassword
  *
- *     RefreshToken:
+ *     RefreshTokenRequest:
  *       type: object
  *       properties:
- *         refreshtoken:
+ *         refreshToken:
  *           type: string
  *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *         deviceId:
+ *           type: string
+ *           format: uuid
+ *           example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  *       required:
- *         - refreshtoken
+ *         - refreshToken
+ *         - deviceId
+ *
+ *     RefreshTokenResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         accessToken:
+ *           type: string
+ *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *         refreshToken:
+ *           type: string
+ *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  */
 
 /**
  * @swagger
- * /auth/forgotPassword:
+ * /auth/forgotpassword:
  *   post:
  *     summary: Solicitar redefinição de senha
  *     description: Envia um e-mail com um link para redefinir a senha do usuário.
@@ -72,10 +90,10 @@
 
 /**
  * @swagger
- * /auth/resetPassword:
+ * /auth/resetpassword:
  *   put:
  *     summary: Redefinir senha
- *     description: Permite ao usuário redefinir sua senha usando um token válido.
+ *     description: Permite ao usuário redefinir sua senha usando um token válido. Revoga todos os tokens existentes do usuário por segurança.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -106,22 +124,26 @@
  * @swagger
  * /auth/refreshtoken:
  *   post:
- *     summary: Atualiza o accesstoken usando um refreshtoken válido
- *     description: Gera um novo accesstoken usando o refreshtoken fornecido.
+ *     summary: Atualiza os tokens de acesso usando refresh token (Token Rotation)
+ *     description: Gera um novo access token E um novo refresh token usando o refresh token fornecido. O refresh token antigo é revogado automaticamente.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/RefreshToken'
+ *             $ref: '#/components/schemas/RefreshTokenRequest'
  *     responses:
  *       200:
- *         description: Novo accesstoken gerado com sucesso
+ *         description: Tokens atualizados com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RefreshTokenResponse'
+ *       400:
+ *         description: Refresh token ou deviceId não fornecidos
  *       401:
- *         description: Refresh token não fornecido ou inválido
- *       403:
- *         description: Refresh token não encontrado no banco de dados
+ *         description: Refresh token inválido ou expirado
  *       500:
- *         description: Erro ao gerar novo token
+ *         description: Erro interno do servidor
  */

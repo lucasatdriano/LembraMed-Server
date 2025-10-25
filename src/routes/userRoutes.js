@@ -1,17 +1,17 @@
 import express from 'express';
-// import { authMiddleware } from '../middleware/authMiddleware.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 import {
-    getUserById,
-    login,
-    logoutUser,
     register,
+    loginMultiAccount,
+    getUserById,
+    logoutAccount,
 } from '../controllers/userController.js';
 
 const router = express.Router();
 
 router.post('/register', register);
-router.post('/login', login);
-router.get('/:userid', getUserById);
-router.post('/:userid/logout', logoutUser);
+router.post('/login', loginMultiAccount);
+router.get('/:userid', authenticateToken, getUserById);
+router.post('/:userid/logout', authenticateToken, logoutAccount);
 
 export default router;

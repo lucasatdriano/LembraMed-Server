@@ -1,38 +1,42 @@
 import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
-    const User = sequelize.define(
-        'tbusers',
+    const Notification = sequelize.define(
+        'tbnotifications',
         {
             id: {
                 type: DataTypes.UUID,
                 primaryKey: true,
                 defaultValue: DataTypes.UUIDV4,
             },
-            name: {
+            userid: {
+                type: DataTypes.UUID,
+                allowNull: false,
+            },
+            title: {
                 type: DataTypes.STRING,
                 allowNull: false,
             },
-            username: {
-                type: DataTypes.STRING,
-                unique: true,
-                allowNull: false,
+            message: {
+                type: DataTypes.TEXT,
+                allowNull: true,
             },
-            password: {
-                type: DataTypes.STRING,
-                allowNull: false,
-            },
-            createdat: {
+            sentat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
-                field: 'createdat',
+                field: 'sentat',
+            },
+            readat: {
+                type: DataTypes.DATE,
+                allowNull: true,
+                field: 'readat',
             },
         },
         {
             timestamps: false,
-            tableName: 'tbusers',
+            tableName: 'tbnotifications',
         },
     );
 
-    return User;
+    return Notification;
 };

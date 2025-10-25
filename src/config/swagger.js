@@ -17,19 +17,20 @@ const options = {
         },
         servers: [
             {
-                url: process.env.BASE_URL || 'http://localhost:3000',
+                // url: process.env.BACKEND_URL || 'http://localhost:3000',
+                url: 'http://localhost:3000',
                 description: 'Servidor',
             },
         ],
-        // components: {
-        //     securitySchemes: {
-        //         BearerAuth: {
-        //             type: 'http',
-        //             scheme: 'bearer',
-        //             bearerFormat: 'JWT',
-        //         },
-        //     },
-        // },
+        components: {
+            securitySchemes: {
+                BearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+        },
     },
     apis: [path.join(__dirname, '../docs/swagger/*.js')],
 };

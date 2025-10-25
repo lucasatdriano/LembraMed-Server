@@ -59,22 +59,25 @@ export async function findContacts(req, res) {
         const whereClause = { userid };
 
         if (search) {
+            const searchLower = search.toLowerCase();
             const isNumber = /^\d+$/.test(search);
 
-            whereClause[Op.or] = [{ name: { [Op.like]: `%${search}%` } }];
+            whereClause[Op.or] = [
+                {
+                    name: {
+                        [Op.like]: `%${searchLower}%`,
+                    },
+                },
+            ];
 
             if (isNumber) {
                 whereClause[Op.or].push({
-                    numberphone: { [Op.like]: `%${search}%` },
+                    numberphone: { [Op.like]: `%${searchLower}%` },
                 });
             }
         }
 
         const contacts = await models.Contact.findAll({ where: whereClause });
-
-        if (contacts.length === 0) {
-            return res.status(404).json({ error: 'Contato não encontrado' });
-        }
 
         res.json(contacts);
     } catch (error) {
@@ -91,7 +94,7 @@ export async function createContact(req, res) {
 
     try {
         const newContact = await models.Contact.create({
-            name,
+            name: name.toLowerCase(),
             numberphone,
             userid,
         });
@@ -116,7 +119,7 @@ export async function updateContact(req, res) {
             return res.status(404).json({ error: 'Contato não encontrado.' });
         }
 
-        contact.name = name || contact.name;
+        contact.name = name.toLowerCase() || contact.name;
         contact.numberphone = numberphone || contact.numberphone;
 
         await contact.save();

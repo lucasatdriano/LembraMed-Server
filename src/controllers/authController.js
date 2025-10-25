@@ -2,9 +2,56 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
 import { models } from '../models/index.js';
+import { TokenService } from '../services/tokenService.js';
+
+export async function refreshMultiAccountToken(req, res) {
+    try {
+        const { refreshToken, deviceId } = req.body;
+
+        if (!refreshToken || !deviceId) {
+            return res.status(400).json({
+                error: 'Refresh token e deviceId são obrigatórios',
+            });
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } =
+            await TokenService.refreshTokens(refreshToken, deviceId);
+
+        await models.AccountDevice.update(
+            {
+                accesstoken: accessToken,
+                lastused: new Date(),
+            },
+            {
+                where: {
+                    userid: decoded.userId,
+                    deviceid: deviceId,
+                },
+            },
+        );
+
+        res.json({
+            success: true,
+            accessToken,
+            refreshToken: newRefreshToken,
+        });
+    } catch (error) {
+        console.error('Erro no refresh token multi-conta:', error);
+
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Token inválido' });
+        }
+
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Token expirado' });
+        }
+
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+}
 
 export async function forgotPassword(req, res) {
-    const { email } = req.body; // adicionar mais pra frente um email na tabela de usuário no banco de dados
+    const { email } = req.body;
 
     try {
         const user = await models.User.findOne({ where: { email: email } });
@@ -72,57 +119,12 @@ export async function resetPassword(req, res) {
         user.password = hashedPassword;
         await user.save();
 
+        await TokenService.revokeAllUserTokens(user.id);
+
         res.json({ message: 'Senha redefinida com sucesso!' });
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao redefinir senha',
-            details: error.message,
-        });
-    }
-}
-
-export async function refreshUserToken(req, res) {
-    const { refreshtoken } = req.body;
-
-    // if (!refreshtoken)
-    //     return res.status(401).json({ error: 'Refresh token não fornecido' });
-
-    try {
-        const secret = process.env.JWT_SECRET;
-        if (!secret) throw new Error('JWT_SECRET não definido');
-
-        const decoded = jwt.verify(refreshtoken, secret);
-
-        if (decoded.exp && decoded.exp < Date.now() / 1000) {
-            return res.status(403).json({ error: 'Refresh token expirado' });
-        }
-
-        const user = await models.User.findByPk(decoded.id);
-
-        if (!user || user.refreshtoken !== refreshtoken) {
-            return res.status(403).json({
-                error: 'Refresh token não encontrado no banco de dados',
-            });
-        }
-
-        const accesstoken = jwt.sign(
-            { id: decoded.id, name: decoded.name },
-            secret,
-            { expiresIn: '24h' },
-        );
-
-        const newRefreshToken = jwt.sign(
-            { id: decoded.id, name: decoded.name },
-            secret,
-            { expiresIn: '30d' },
-        );
-
-        await user.update({ refreshtoken: newRefreshToken });
-
-        res.json({ accesstoken, refreshtoken: newRefreshToken });
-    } catch (error) {
-        res.status(500).json({
-            error: 'Erro ao gerar novo token',
             details: error.message,
         });
     }

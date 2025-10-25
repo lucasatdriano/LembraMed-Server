@@ -37,6 +37,8 @@
  *   get:
  *     summary: Obtém contatos de um usuário, filtrados por nome ou número de telefone.
  *     tags: [Contacts]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -68,10 +70,12 @@
 
 /**
  * @swagger
- * /contacts/{userid}/{contactId}:
+ * /contacts/{userid}/{contactid}:
  *   get:
  *     summary: Obtém um único contato pelo ID
  *     tags: [Contacts]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -102,6 +106,8 @@
  *   post:
  *     summary: Cria um novo contato
  *     tags: [Contacts]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -133,10 +139,12 @@
 
 /**
  * @swagger
- * /contacts/{userid}/{contactId}:
+ * /contacts/{userid}/{contactid}:
  *   put:
  *     summary: Atualiza um contato existente
  *     tags: [Contacts]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
@@ -174,10 +182,12 @@
 
 /**
  * @swagger
- * /contacts/{userid}/{contactId}:
+ * /contacts/{userid}/{contactid}:
  *   delete:
  *     summary: Deleta um contato
  *     tags: [Contacts]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid

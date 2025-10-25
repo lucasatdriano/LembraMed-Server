@@ -39,7 +39,7 @@
  *           description: Status para saber se o remédio foi tomado
  *         createdat:
  *           type: string
- *           format: date
+ *           format: date-time
  *           description: Data de criação do medicamento.
  *         userid:
  *           type: string
@@ -58,312 +58,513 @@
  *         periodstart: "2025-10-01"
  *         periodend: "2025-10-10"
  *         status: false
- *         createdat: "2025-10-01"
+ *         createdat: "2025-10-01T10:00:00.000Z"
  *         userid: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
  *         doseintervalid: 1
  *         intervalinhours: 8
+ *
+ *     CreateMedicationRequest:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *         hourfirstdose:
+ *           type: string
+ *           format: time
+ *         periodstart:
+ *           type: string
+ *           format: date
+ *         periodend:
+ *           type: string
+ *           format: date
+ *         intervalinhours:
+ *           type: number
+ *       required:
+ *         - name
+ *         - hourfirstdose
+ *         - periodstart
+ *         - periodend
+ *         - intervalinhours
+ *
+ *     UpdateMedicationRequest:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *         hournextdose:
+ *           type: string
+ *           format: time
+ *         periodstart:
+ *           type: string
+ *           format: date
+ *         periodend:
+ *           type: string
+ *           format: date
+ *         intervalinhours:
+ *           type: number
+ *         status:
+ *           type: boolean
+ *
+ *     MedicationResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         medication:
+ *           $ref: '#/components/schemas/Medication'
+ *
+ *     MedicationsResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         medications:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Medication'
  */
 
 /**
  * @swagger
- * /medications/{userid}:
+ * /medications/{userid}/search:
  *   get:
- *     summary: Obtém todos os medicamentos de um usuário, filtrados por nome ou intervalo de dose.
+ *     summary: Busca medicamentos de um usuário por nome ou intervalo
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
+ *           format: uuid
+ *         description: ID do usuário
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
- *         description: Nome do medicamento ou intervalo de dose (em horas) para filtrar os resultados. Pode ser utilizado para buscar pelo nome do medicamento ou pelo intervalo de dose, se um número for fornecido.
+ *         description: Nome do medicamento ou intervalo de horas para filtrar
  *     responses:
  *       200:
- *         description: Lista de medicamentos retornada com sucesso.
+ *         description: Medicamentos encontrados com sucesso
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Medication'
- *       401:
- *         description: Usuário não autenticado.
+ *               $ref: '#/components/schemas/MedicationsResponse'
+ *       403:
+ *         description: Acesso não autorizado a esta conta
  *       404:
- *         description: Medicamento não encontrado.
+ *         description: Nenhum medicamento encontrado
  *       500:
- *         description: Erro ao buscar medicamentos.
+ *         description: Erro ao buscar medicamentos
  */
 
 /**
  * @swagger
  * /medications/{userid}/{medicationid}:
  *   get:
- *     summary: Obtém um único medicamento pelo ID.
+ *     summary: Obtém um medicamento específico pelo ID
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
+ *           format: uuid
+ *         description: ID do usuário
  *       - in: path
  *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do medicamento.
+ *           format: uuid
+ *         description: ID do medicamento
  *     responses:
  *       200:
- *         description: Medicamento retornado com sucesso.
+ *         description: Medicamento encontrado com sucesso
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Medication'
- *       401:
- *         description: Usuário não autenticado.
+ *               $ref: '#/components/schemas/MedicationResponse'
+ *       403:
+ *         description: Acesso não autorizado
  *       404:
- *         description: Medicamento não encontrado.
+ *         description: Medicamento não encontrado
  *       500:
- *         description: Erro ao buscar o medicamento.
+ *         description: Erro ao buscar medicamento
  */
 
 /**
  * @swagger
  * /medications/{userid}/{medicationid}/history:
  *   get:
- *     summary: Obtém o histórico de doses de um medicamento.
+ *     summary: Obtém o histórico de doses de um medicamento
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
+ *           format: uuid
+ *         description: ID do usuário
  *       - in: path
  *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do medicamento.
+ *           format: uuid
+ *         description: ID do medicamento
  *     responses:
  *       200:
- *         description: Histórico retornado com sucesso.
+ *         description: Histórico retornado com sucesso
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   takendate:
- *                     type: string
- *                     format: date-time
- *                   taken:
- *                     type: boolean
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 history:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       medicationid:
+ *                         type: string
+ *                       action:
+ *                         type: string
+ *                       details:
+ *                         type: string
+ *                       takendate:
+ *                         type: string
+ *                         format: date-time
+ *                       taken:
+ *                         type: boolean
+ *                       createdat:
+ *                         type: string
+ *                         format: date-time
+ *       403:
+ *         description: Acesso não autorizado
+ *       404:
+ *         description: Medicamento não encontrado
  *       500:
- *         description: Erro ao buscar o histórico do medicamento.
+ *         description: Erro ao buscar histórico
  */
 
 /**
  * @swagger
- * /medications/{userid}:
+ * /medications/{userid}/create:
  *   post:
- *     summary: Cria um novo medicamento.
+ *     summary: Cria um novo medicamento
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
+ *           format: uuid
+ *         description: ID do usuário
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               hourfirstdose:
- *                 type: string
- *                 format: time
- *               periodstart:
- *                 type: string
- *                 format: date
- *               periodend:
- *                 type: string
- *                 format: date
- *               intervalinhours:
- *                 type: number
- *             required:
- *               - name
- *               - hourfirstdose
- *               - periodstart
- *               - periodend
- *               - intervalinhours
+ *             $ref: '#/components/schemas/CreateMedicationRequest'
  *     responses:
  *       201:
- *         description: Medicamento criado com sucesso.
+ *         description: Medicamento criado com sucesso
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Medication'
- *       401:
- *         description: Usuário não autenticado.
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Medicamento criado com sucesso"
+ *                 medication:
+ *                   $ref: '#/components/schemas/Medication'
+ *       403:
+ *         description: Acesso não autorizado
  *       500:
- *         description: Erro ao criar o medicamento.
+ *         description: Erro ao criar medicamento
+ */
+
+/**
+ * @swagger
+ * /medications/{userid}/{medicationid}/taken:
+ *   post:
+ *     summary: Marca um medicamento como tomado
+ *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID do usuário
+ *       - in: path
+ *         name: medicationid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID do medicamento
+ *     responses:
+ *       200:
+ *         description: Medicamento marcado como tomado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Medicamento marcado como tomado"
+ *                 medication:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     status:
+ *                       type: boolean
+ *                     hournextdose:
+ *                       type: string
+ *                     nextDose:
+ *                       type: string
+ *       403:
+ *         description: Acesso não autorizado
+ *       404:
+ *         description: Medicamento não encontrado
+ *       500:
+ *         description: Erro ao marcar como tomado
  */
 
 /**
  * @swagger
  * /medications/{userid}/{medicationid}/missed:
  *   post:
- *     summary: Registra uma dose não tomada.
+ *     summary: Registra uma dose não tomada
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
+ *         description: ID do usuário
  *       - in: path
  *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
+ *         description: ID do medicamento
  *     responses:
  *       200:
- *         description: Dose não tomada registrada com sucesso.
+ *         description: Dose não tomada registrada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Dose não tomada registrada no histórico"
+ *       403:
+ *         description: Acesso não autorizado
  *       404:
- *         description: Medicamento não encontrado.
+ *         description: Medicamento não encontrado
  *       500:
- *         description: Erro ao registrar dose não tomada.
+ *         description: Erro ao registrar dose não tomada
+ */
+
+/**
+ * @swagger
+ * /medications/{userid}/{medicationid}/advance:
+ *   post:
+ *     summary: Força o avanço da dose do medicamento
+ *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: medicationid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID do medicamento
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userid:
+ *                 type: string
+ *                 format: uuid
+ *             required:
+ *               - userid
+ *     responses:
+ *       200:
+ *         description: Dose avançada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Dose avançada com sucesso"
+ *                 medication:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     status:
+ *                       type: boolean
+ *                     hournextdose:
+ *                       type: string
+ *       403:
+ *         description: Acesso não autorizado
+ *       404:
+ *         description: Medicamento não encontrado
+ *       500:
+ *         description: Erro ao forçar avanço de dose
  */
 
 /**
  * @swagger
  * /medications/{userid}/{medicationid}:
  *   put:
- *     summary: Atualiza um medicamento existente.
+ *     summary: Atualiza um medicamento existente
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
+ *           format: uuid
+ *         description: ID do usuário
  *       - in: path
  *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do medicamento.
+ *           format: uuid
+ *         description: ID do medicamento
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               hournextdose:
- *                 type: string
- *                 format: time
- *               periodstart:
- *                 type: string
- *                 format: date
- *               periodend:
- *                 type: string
- *                 format: date
- *               intervalinhours:
- *                 type: number
+ *             $ref: '#/components/schemas/UpdateMedicationRequest'
  *     responses:
  *       200:
- *         description: Medicamento atualizado com sucesso.
+ *         description: Medicamento atualizado com sucesso
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Medication'
- *       401:
- *         description: Usuário não autenticado.
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Medicamento atualizado com sucesso"
+ *                 medication:
+ *                   $ref: '#/components/schemas/Medication'
+ *       403:
+ *         description: Acesso não autorizado
  *       404:
- *         description: Medicamento não encontrado.
+ *         description: Medicamento não encontrado
  *       500:
- *         description: Erro ao atualizar o medicamento.
- */
-
-/**
- * @swagger
- * /medications/{userid}/{medicationid}/status:
- *   put:
- *     summary: Atualiza o status de um medicamento (tomado ou não).
- *     tags: [Medications]
- *     parameters:
- *       - in: path
- *         name: userid
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: medicationid
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               status:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Status atualizado com sucesso.
- *       404:
- *         description: Medicamento não encontrado.
- *       500:
- *         description: Erro ao atualizar o status do medicamento.
+ *         description: Erro ao atualizar medicamento
  */
 
 /**
  * @swagger
  * /medications/{userid}/{medicationid}:
  *   delete:
- *     summary: Deleta um medicamento.
+ *     summary: Deleta um medicamento
  *     tags: [Medications]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do usuário.
+ *           format: uuid
+ *         description: ID do usuário
  *       - in: path
  *         name: medicationid
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do medicamento.
+ *           format: uuid
+ *         description: ID do medicamento
  *     responses:
  *       200:
- *         description: Medicamento deletado com sucesso.
- *       401:
- *         description: Usuário não autenticado.
+ *         description: Medicamento deletado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Medicamento Paracetamol deletado com sucesso."
+ *       403:
+ *         description: Acesso não autorizado
  *       404:
- *         description: Medicamento não encontrado.
+ *         description: Medicamento não encontrado
  *       500:
- *         description: Erro ao deletar o medicamento.
+ *         description: Erro ao deletar medicamento
  */

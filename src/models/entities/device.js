@@ -1,8 +1,8 @@
 import { DataTypes } from 'sequelize';
 
 export default (sequelize) => {
-    const User = sequelize.define(
-        'tbusers',
+    const Device = sequelize.define(
+        'tbdevices',
         {
             id: {
                 type: DataTypes.UUID,
@@ -11,28 +11,24 @@ export default (sequelize) => {
             },
             name: {
                 type: DataTypes.STRING,
-                allowNull: false,
-            },
-            username: {
-                type: DataTypes.STRING,
-                unique: true,
-                allowNull: false,
-            },
-            password: {
-                type: DataTypes.STRING,
-                allowNull: false,
+                allowNull: true,
             },
             createdat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),
                 field: 'createdat',
             },
+            lastseen: {
+                type: DataTypes.DATE,
+                defaultValue: sequelize.fn('NOW'),
+                field: 'lastseen',
+            },
         },
         {
             timestamps: false,
-            tableName: 'tbusers',
+            tableName: 'tbdevices',
         },
     );
 
-    return User;
+    return Device;
 };
