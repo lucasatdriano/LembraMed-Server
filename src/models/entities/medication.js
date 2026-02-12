@@ -39,6 +39,16 @@ export default (sequelize) => {
                 defaultValue: false,
                 field: 'status',
             },
+            pendingconfirmation: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false,
+                field: 'pendingconfirmation',
+            },
+            pendinguntil: {
+                type: DataTypes.DATE,
+                allowNull: true,
+                field: 'pendinguntil',
+            },
             doseintervalid: {
                 type: DataTypes.INTEGER,
                 allowNull: false,

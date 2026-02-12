@@ -1,37 +1,58 @@
 import { Sequelize, Op } from 'sequelize';
 import { models } from '../models/index.js';
 import { calculateNextDose } from '../utils/calculateNextDose.js';
+import { calcularTolerancia } from '../utils/doseRules.js';
 
-export async function getUserMedications(req, res) {
-    const { userid } = req.params;
+export async function getMedications(req, res) {
+    const { page = 1, limit = 20 } = req.query;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res
-                .status(403)
-                .json({ error: 'Acesso não autorizado a esta conta' });
-        }
+        const offset = (page - 1) * limit;
 
-        const medications = await models.Medication.findAll({
-            where: { userid },
-            include: [
-                {
-                    model: models.DoseIntervals,
-                    as: 'doseinterval',
-                    attributes: ['id', 'description', 'intervalinhours'],
-                },
-                {
-                    model: models.MedicationHistory,
-                    as: 'history',
-                    limit: 10,
-                    order: [['createdat', 'DESC']],
-                },
-            ],
-            order: [['hournextdose', 'ASC']],
+        const { count, rows: medications } =
+            await models.Medication.findAndCountAll({
+                where: { userid: userId },
+                attributes: [
+                    'id',
+                    'name',
+                    'hournextdose',
+                    'periodstart',
+                    'periodend',
+                    'status',
+                    'pendingconfirmation',
+                    'pendinguntil',
+                    'lasttakentime',
+                    'createdat',
+                ],
+                include: [
+                    {
+                        model: models.DoseIntervals,
+                        as: 'doseinterval',
+                        attributes: ['id', 'intervalinhours'],
+                    },
+                    {
+                        model: models.MedicationHistory,
+                        as: 'history',
+                        limit: 10,
+                        order: [['createdat', 'DESC']],
+                    },
+                ],
+                order: [['hournextdose', 'ASC']],
+                limit: parseInt(limit),
+                offset: offset,
+            });
+
+        res.json({
+            medications,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(count / limit),
+                totalRecords: count,
+                hasNext: offset + medications.length < count,
+                hasPrev: page > 1,
+            },
         });
-
-        res.json({ success: true, medications });
     } catch (error) {
         console.error('Erro ao buscar medicamentos:', error);
         res.status(500).json({
@@ -42,20 +63,32 @@ export async function getUserMedications(req, res) {
 }
 
 export async function getMedicationById(req, res) {
-    const { userid, medicationid } = req.params;
+    const { medicationid } = req.params;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
-        const medication = await models.Medication.findByPk(medicationid, {
+        const medication = await models.Medication.findOne({
+            where: {
+                id: medicationid,
+                userid: userId,
+            },
+            attributes: [
+                'id',
+                'name',
+                'hournextdose',
+                'periodstart',
+                'periodend',
+                'status',
+                'pendingconfirmation',
+                'pendinguntil',
+                'lasttakentime',
+                'createdat',
+            ],
             include: [
                 {
                     model: models.DoseIntervals,
                     as: 'doseinterval',
-                    attributes: ['id', 'intervalinhours', 'description'],
+                    attributes: ['id', 'intervalinhours'],
                 },
                 {
                     model: models.MedicationHistory,
@@ -66,13 +99,13 @@ export async function getMedicationById(req, res) {
             ],
         });
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
 
-        res.json({ success: true, medication });
+        res.json(medication);
     } catch (error) {
         console.error('Erro ao buscar medicamento:', error);
         res.status(500).json({
@@ -83,20 +116,15 @@ export async function getMedicationById(req, res) {
 }
 
 export async function findMedications(req, res) {
-    const { userid } = req.params;
-    const { search } = req.query;
+    const { search, page = 1, limit = 20 } = req.query;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
-        const whereClause = { userid };
+        const whereClause = { userid: userId };
+        const offset = (page - 1) * limit;
 
         if (search) {
             const searchLower = search.toLowerCase();
-
             const orConditions = [{ name: { [Op.like]: `%${searchLower}%` } }];
 
             if (!isNaN(Number(search))) {
@@ -111,25 +139,47 @@ export async function findMedications(req, res) {
             whereClause[Op.or] = orConditions;
         }
 
-        const medications = await models.Medication.findAll({
-            where: whereClause,
-            include: [
-                {
-                    model: models.DoseIntervals,
-                    as: 'doseinterval',
-                    attributes: ['intervalinhours', 'description'],
-                },
-            ],
-        });
+        const { count, rows: medications } =
+            await models.Medication.findAndCountAll({
+                where: whereClause,
+                attributes: [
+                    'id',
+                    'name',
+                    'hournextdose',
+                    'periodstart',
+                    'periodend',
+                    'status',
+                    'pendingconfirmation',
+                    'pendinguntil',
+                    'createdat',
+                ],
+                include: [
+                    {
+                        model: models.DoseIntervals,
+                        as: 'doseinterval',
+                        attributes: ['intervalinhours'],
+                    },
+                ],
+                limit: parseInt(limit),
+                offset: offset,
+            });
 
         if (medications.length === 0) {
             return res.status(404).json({
-                success: false,
                 error: 'Nenhum medicamento encontrado',
             });
         }
 
-        res.json({ success: true, medications });
+        res.json({
+            medications,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(count / limit),
+                totalRecords: count,
+                hasNext: offset + medications.length < count,
+                hasPrev: page > 1,
+            },
+        });
     } catch (error) {
         console.error('Erro ao buscar medicamentos:', error);
         res.status(500).json({
@@ -140,29 +190,56 @@ export async function findMedications(req, res) {
 }
 
 export async function getMedicationHistory(req, res) {
-    const { userid, medicationid } = req.params;
+    const { medicationid } = req.params;
+    const { startDate, endDate, status, page = 1, limit = 20 } = req.query;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
+        const medication = await models.Medication.findOne({
+            where: {
+                id: medicationid,
+                userid: userId,
+            },
+        });
 
-        const medication = await models.Medication.findByPk(medicationid);
-
-        if (!medication || medication.userid !== userid) {
+        if (!medication) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
 
-        const history = await models.MedicationHistory.findAll({
-            where: { medicationid },
-            order: [['createdat', 'DESC']],
-            limit: 50,
-        });
+        const whereClause = { medicationid };
 
-        res.json({ success: true, history });
+        if (startDate || endDate) {
+            whereClause.takendate = {};
+            if (startDate) whereClause.takendate[Op.gte] = new Date(startDate);
+            if (endDate) whereClause.takendate[Op.lte] = new Date(endDate);
+        }
+
+        if (status && status !== 'all') {
+            whereClause.taken = status === 'taken';
+        }
+
+        const offset = (page - 1) * limit;
+
+        const { count, rows: history } =
+            await models.MedicationHistory.findAndCountAll({
+                where: whereClause,
+                order: [['takendate', 'DESC']],
+                limit: parseInt(limit),
+                offset: offset,
+            });
+
+        res.json({
+            history,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(count / limit),
+                totalRecords: count,
+                hasNext: offset + history.length < count,
+                hasPrev: page > 1,
+            },
+        });
     } catch (error) {
         console.error('Erro ao buscar histórico:', error);
         res.status(500).json({
@@ -173,16 +250,11 @@ export async function getMedicationHistory(req, res) {
 }
 
 export async function createMedication(req, res) {
-    const { userid } = req.params;
     const { name, hourfirstdose, periodstart, periodend, intervalinhours } =
         req.body;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
         let doseInterval = await models.DoseIntervals.findOne({
             where: { intervalinhours },
         });
@@ -190,7 +262,6 @@ export async function createMedication(req, res) {
         if (!doseInterval) {
             doseInterval = await models.DoseIntervals.create({
                 intervalinhours,
-                description: `Cada ${intervalinhours} horas`,
             });
         }
 
@@ -202,7 +273,10 @@ export async function createMedication(req, res) {
             periodstart,
             periodend,
             status: false,
-            userid,
+            pendingconfirmation: false,
+            pendinguntil: null,
+            lasttakentime: null,
+            userid: userId,
             doseintervalid: doseInterval.id,
             hournextdose,
         });
@@ -214,17 +288,13 @@ export async function createMedication(req, res) {
                     {
                         model: models.DoseIntervals,
                         as: 'doseinterval',
-                        attributes: ['id', 'intervalinhours', 'description'],
+                        attributes: ['id', 'intervalinhours'],
                     },
                 ],
             },
         );
 
-        res.status(201).json({
-            success: true,
-            message: 'Medicamento criado com sucesso',
-            medication: medicationWithDetails,
-        });
+        res.status(201).json(medicationWithDetails);
     } catch (error) {
         console.error('Erro ao criar medicamento:', error);
         res.status(500).json({
@@ -234,16 +304,19 @@ export async function createMedication(req, res) {
     }
 }
 
-export async function markAsTaken(req, res) {
-    const { userid, medicationid } = req.params;
+/**
+ * 🟢 PASSO 1: Usuário clica "Tomei" (duplo clique)
+ * - Marca como pendente de confirmação
+ * - Adiciona 3 minutos ao horário correto
+ * - Se tiver adiantado, aguarda até horário correto + 3
+ */
+export async function registerPendingConfirmation(req, res) {
+    const { medicationid } = req.params;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
-        const medication = await models.Medication.findByPk(medicationid, {
+        const medication = await models.Medication.findOne({
+            where: { id: medicationid, userid: userId },
             include: [
                 {
                     model: models.DoseIntervals,
@@ -253,106 +326,104 @@ export async function markAsTaken(req, res) {
             ],
         });
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication) {
             return res
                 .status(404)
-                .json({ error: 'Medicamento não encontrado.' });
+                .json({ error: 'Medicamento não encontrado' });
         }
 
-        await models.MedicationHistory.create({
-            medicationid,
-            action: 'taken',
-            details: 'Marcado como tomado pelo usuário',
-            takendate: new Date(),
-            taken: true,
+        const agora = new Date();
+        const horaAtual = `${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+        const horaCorreta = medication.hournextdose;
+
+        // ⏱️ CORREÇÃO: SEMPRE adiciona 3 minutos a partir de AGORA!
+        const pendingUntil = new Date(agora.getTime() + 3 * 60 * 1000);
+
+        // ✅ Marca como aguardando confirmação
+        await medication.update({
+            status: true, // Aguardando confirmação
+            pendingconfirmation: true,
+            pendinguntil: pendingUntil,
+            // ⚠️ NÃO muda hournextdose ainda!
         });
 
-        await medication.update({ status: true });
-
-        // TODO: Agendar job para daqui 10 minutos
-        // para verificar e atualizar automaticamente
-
-        const nextDoseTime = calculateNextDose(
-            medication.hournextdose,
-            medication.doseinterval.intervalinhours,
-        );
+        const mensagem =
+            horaAtual < horaCorreta
+                ? 'Dose adiantada. Aguardando confirmação de 3 minutos.'
+                : 'Dose registrada. Aguardando confirmação de 3 minutos.';
 
         res.json({
-            success: true,
-            message: 'Medicamento marcado como tomado',
+            message: mensagem,
             medication: {
                 id: medication.id,
                 name: medication.name,
                 status: true,
-                hournextdose: medication.hournextdose,
-                nextDose: nextDoseTime,
+                pendingconfirmation: true,
+                pendinguntil: pendingUntil,
+                hournextdose: horaCorreta, // Continua mostrando o horário correto
+                doseinterval: medication.doseinterval,
             },
         });
     } catch (error) {
-        console.error('Erro ao marcar como tomado:', error);
-        res.status(500).json({
-            error: 'Erro ao marcar medicamento como tomado',
-            details: error.message,
-        });
+        console.error('Erro ao registrar confirmação pendente:', error);
+        res.status(500).json({ error: 'Erro ao registrar confirmação' });
     }
 }
 
-export async function registerMissedDose(req, res) {
-    const { userid, medicationid } = req.params;
+/**
+ * 🔴 Cancelar confirmação pendente
+ * - Usuário desistiu de tomar
+ * - Não registra no histórico
+ * - Não muda o horário
+ */
+export async function cancelPendingDose(req, res) {
+    const { medicationid } = req.params;
+    const userId = req.user.userId; // 🔴 ADICIONAR ISSO!
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
+        const medication = await models.Medication.findOne({
+            where: {
+                id: medicationid,
+                userid: userId, // 🔴 FILTRAR PELO USUÁRIO!
+            },
+        });
 
-        const medication = await models.Medication.findByPk(medicationid);
-
-        if (!medication || medication.userid !== userid) {
+        if (!medication) {
             return res
                 .status(404)
-                .json({ error: 'Medicamento não encontrado.' });
+                .json({ error: 'Medicamento não encontrado' });
         }
 
-        await models.MedicationHistory.create({
-            medicationid,
-            action: 'missed',
-            details: 'Dose não tomada registrada',
-            takendate: new Date(),
-            taken: false,
+        await medication.update({
+            status: false,
+            pendingconfirmation: false,
+            pendinguntil: null,
         });
 
         res.json({
-            success: true,
-            message: 'Dose não tomada registrada no histórico',
+            message: 'Confirmação cancelada',
+            medication: {
+                id: medication.id,
+                name: medication.name,
+                status: false,
+                hournextdose: medication.hournextdose,
+            },
         });
     } catch (error) {
-        console.error('Erro ao registrar dose não tomada:', error);
-        res.status(500).json({
-            error: 'Erro ao registrar dose não tomada',
-            details: error.message,
-        });
+        console.error('Erro ao cancelar confirmação:', error);
+        res.status(500).json({ error: 'Erro ao cancelar confirmação' });
     }
 }
 
 export async function updateMedication(req, res) {
-    const { userid, medicationid } = req.params;
-    const {
-        name,
-        hournextdose,
-        periodstart,
-        periodend,
-        intervalinhours,
-        status,
-    } = req.body;
+    const { medicationid } = req.params;
+    const { name, hournextdose, periodstart, periodend, intervalinhours } =
+        req.body;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
-        const medication = await models.Medication.findByPk(medicationid, {
+        const medication = await models.Medication.findOne({
+            where: { id: medicationid, userid: userId },
             include: [
                 {
                     model: models.DoseIntervals,
@@ -362,7 +433,7 @@ export async function updateMedication(req, res) {
             ],
         });
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
@@ -371,7 +442,6 @@ export async function updateMedication(req, res) {
         const updates = {};
         if (name) updates.name = name.toLowerCase();
         if (hournextdose) updates.hournextdose = hournextdose;
-        if (status !== undefined) updates.status = status;
         if (periodstart) updates.periodstart = periodstart;
         if (periodend) updates.periodend = periodend;
 
@@ -383,33 +453,19 @@ export async function updateMedication(req, res) {
             if (!doseInterval) {
                 doseInterval = await models.DoseIntervals.create({
                     intervalinhours,
-                    description: `Cada ${intervalinhours} horas`,
                 });
             }
 
             updates.doseintervalid = doseInterval.id;
 
-            const now = new Date();
-            const createdat = new Date(medication.createdat);
-            const isSameDay = now.toDateString() === createdat.toDateString();
+            // Recalcula próximo horário baseado no novo intervalo
+            const agora = new Date();
+            const horaAtual = `${agora.getHours()}:${agora.getMinutes()}`;
 
-            const lastDoseTime = new Date();
-            const [lastDoseHours, lastDoseMinutes] = medication.hournextdose
-                .split(':')
-                .map(Number);
-            lastDoseTime.setHours(lastDoseHours, lastDoseMinutes, 0, 0);
-
-            if (isSameDay && now <= lastDoseTime) {
-                updates.hournextdose = calculateNextDose(
-                    medication.hourfirstdose,
-                    intervalinhours,
-                );
-            } else {
-                updates.hournextdose = calculateNextDose(
-                    medication.hournextdose,
-                    intervalinhours,
-                );
-            }
+            updates.hournextdose = calculateNextDose(
+                horaAtual,
+                intervalinhours,
+            );
         }
 
         await medication.update(updates);
@@ -421,17 +477,13 @@ export async function updateMedication(req, res) {
                     {
                         model: models.DoseIntervals,
                         as: 'doseinterval',
-                        attributes: ['id', 'intervalinhours', 'description'],
+                        attributes: ['id', 'intervalinhours'],
                     },
                 ],
             },
         );
 
-        res.json({
-            success: true,
-            message: 'Medicamento atualizado com sucesso',
-            medication: updatedMedication,
-        });
+        res.json(updatedMedication);
     } catch (error) {
         console.error('Erro ao atualizar medicamento:', error);
         res.status(500).json({
@@ -441,90 +493,25 @@ export async function updateMedication(req, res) {
     }
 }
 
-export async function forceDoseAdvance(req, res) {
+export async function deleteMedication(req, res) {
     const { medicationid } = req.params;
-    const { userid } = req.body;
+    const userId = req.user.userId;
 
     try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
-        const medication = await models.Medication.findByPk(medicationid, {
-            include: [
-                {
-                    model: models.DoseIntervals,
-                    as: 'doseinterval',
-                    attributes: ['intervalinhours'],
-                },
-            ],
+        const medication = await models.Medication.findOne({
+            where: { id: medicationid, userid: userId },
         });
 
-        if (!medication || medication.userid !== userid) {
+        if (!medication) {
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado.' });
         }
 
-        const newNextDose = calculateNextDose(
-            medication.hournextdose,
-            medication.doseinterval.intervalinhours,
-        );
-
-        await medication.update({
-            status: false,
-            hournextdose: newNextDose,
-        });
-
-        await models.MedicationHistory.create({
-            medicationid,
-            action: 'auto_advanced',
-            details: 'Dose avançada automaticamente após 25 minutos',
-        });
-
-        res.json({
-            success: true,
-            message: 'Dose avançada com sucesso',
-            medication: {
-                id: medication.id,
-                name: medication.name,
-                status: false,
-                hournextdose: newNextDose,
-            },
-        });
-    } catch (error) {
-        console.error('Erro ao forçar avanço de dose:', error);
-        res.status(500).json({
-            error: 'Erro ao forçar avanço de dose',
-            details: error.message,
-        });
-    }
-}
-
-export async function deleteMedication(req, res) {
-    const { userid, medicationid } = req.params;
-
-    try {
-        const tokenUserId = req.user.userId;
-        if (tokenUserId !== userid) {
-            return res.status(403).json({ error: 'Acesso não autorizado' });
-        }
-
-        const medication = await models.Medication.findByPk(medicationid);
-
-        if (!medication || medication.userid !== userid) {
-            return res.status(404).json({
-                error: 'Medicamento não encontrado.',
-            });
-        }
-
         const medicationName = medication.name;
-
         await medication.destroy();
 
         res.json({
-            success: true,
             message: `Medicamento ${medicationName} deletado com sucesso.`,
         });
     } catch (error) {

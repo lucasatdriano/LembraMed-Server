@@ -122,6 +122,40 @@
 
 /**
  * @swagger
+ * /auth/token-status:
+ *   get:
+ *     summary: Verifica o status de um refresh token
+ *     description: Verifica se um refresh token é válido e ainda não expirou.
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: query
+ *         name: refreshToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: O refresh token a ser verificado
+ *       - in: query
+ *         name: deviceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: O ID do dispositivo associado ao token
+ *     responses:
+ *       200:
+ *         description: Status do token verificado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TokenStatusResponse'
+ *       400:
+ *         description: Parâmetros necessários não fornecidos
+ *       500:
+ *         description: Erro interno do servidor
+ */
+
+/**
+ * @swagger
  * /auth/refreshtoken:
  *   post:
  *     summary: Atualiza os tokens de acesso usando refresh token (Token Rotation)

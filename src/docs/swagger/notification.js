@@ -12,10 +12,6 @@
  *     SendNotificationRequest:
  *       type: object
  *       properties:
- *         userid:
- *           type: string
- *           format: uuid
- *           example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  *         title:
  *           type: string
  *           example: "Hora do Medicamento"
@@ -26,7 +22,6 @@
  *           type: string
  *           example: "medication-reminder"
  *       required:
- *         - userid
  *         - title
  *
  *     SendNotificationResponse:
@@ -88,8 +83,8 @@
  * @swagger
  * /notifications/send:
  *   post:
- *     summary: Envia notificação push para um usuário
- *     description: Envia notificação para todos os dispositivos registrados do usuário
+ *     summary: Envia notificação push para o usuário autenticado
+ *     description: Envia notificação para todos os dispositivos registrados do usuário autenticado
  *     tags: [Notifications]
  *     security:
  *       - BearerAuth: []
@@ -107,7 +102,7 @@
  *             schema:
  *               $ref: '#/components/schemas/SendNotificationResponse'
  *       400:
- *         description: UserID e title são obrigatórios
+ *         description: Title é obrigatório
  *       404:
  *         description: Nenhuma subscription encontrada para este usuário
  *       500:
@@ -116,21 +111,14 @@
 
 /**
  * @swagger
- * /notifications/user/{userid}:
+ * /notifications:
  *   get:
- *     summary: Obtém notificações de um usuário
- *     description: Retorna a lista de notificações de um usuário específico
+ *     summary: Obtém notificações do usuário autenticado
+ *     description: Retorna a lista de notificações do usuário autenticado
  *     tags: [Notifications]
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - in: path
- *         name: userid
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID do usuário
  *       - in: query
  *         name: limit
  *         schema:
@@ -162,7 +150,7 @@
  * /notifications/{notificationid}/read:
  *   patch:
  *     summary: Marca uma notificação como lida
- *     description: Atualiza a data de leitura de uma notificação específica
+ *     description: Atualiza a data de leitura de uma notificação específica do usuário autenticado
  *     tags: [Notifications]
  *     security:
  *       - BearerAuth: []

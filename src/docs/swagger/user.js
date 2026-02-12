@@ -89,14 +89,10 @@
  *     LogoutRequest:
  *       type: object
  *       properties:
- *         userid:
- *           type: string
- *           format: uuid
  *         deviceId:
  *           type: string
  *           format: uuid
  *       required:
- *         - userid
  *         - deviceId
  */
 
@@ -162,21 +158,13 @@
 
 /**
  * @swagger
- * /users/{userid}:
+ * /users/me:
  *   get:
- *     summary: Obtém os detalhes de um usuário
- *     description: Retorna informações do usuário com base no ID fornecido.
+ *     summary: Obtém os detalhes do usuário autenticado
+ *     description: Retorna informações do usuário autenticado com base no token JWT.
  *     tags: [User]
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userid
- *         required: true
- *         description: ID do usuário
- *         schema:
- *           type: string
- *           format: uuid
  *     responses:
  *       200:
  *         description: Detalhes do usuário encontrados
@@ -184,6 +172,8 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Usuário não autenticado
  *       404:
  *         description: Usuário não encontrado
  *       500:
@@ -194,8 +184,8 @@
  * @swagger
  * /users/logout:
  *   post:
- *     summary: Realiza logout de uma conta específica do dispositivo
- *     description: Remove uma conta específica do dispositivo, revogando todos os tokens associados a essa conta no dispositivo.
+ *     summary: Realiza logout da conta do dispositivo
+ *     description: Remove a conta autenticada do dispositivo, revogando todos os tokens associados.
  *     tags: [User]
  *     security:
  *       - BearerAuth: []
@@ -220,7 +210,7 @@
  *                   type: string
  *                   example: "Conta removida do dispositivo"
  *       400:
- *         description: UserID e deviceId são obrigatórios
+ *         description: DeviceId é obrigatório
  *       500:
  *         description: Erro interno do servidor
  */

@@ -41,15 +41,9 @@ export default (sequelize) => {
             timestamps: false,
             tableName: 'tbrefreshtokens',
             indexes: [
-                {
-                    fields: ['userid', 'deviceid'],
-                },
-                {
-                    fields: ['expiresat'],
-                },
-                {
-                    fields: ['token'],
-                },
+                { fields: ['userid', 'deviceid'] },
+                { fields: ['expiresat'] },
+                { fields: ['token'] },
             ],
         },
     );

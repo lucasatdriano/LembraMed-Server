@@ -12,17 +12,12 @@ import deviceRoutes from './routes/deviceRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import medicationRoutes from './routes/medicationRoutes.js';
+import { TokenService } from './services/tokenService.js';
+import medicationScheduler from './services/medicationSchedulerService.js';
 
 const app = express();
-app.use(express.json());
 
-app.use((req, res, next) => {
-    console.log(`📨 [DEBUG REQUEST] ${req.method} ${req.url}`, {
-        body: req.body,
-        headers: req.headers,
-    });
-    next();
-});
+dotenv.config();
 
 app.use(
     cors({
@@ -32,10 +27,17 @@ app.use(
                 'http://localhost:3000',
                 'http://localhost:3001',
                 'http://127.0.0.1:3001',
+                'http://127.0.0.1:3000',
                 'https://seu-frontend-production.com',
             ];
-            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-                console.log('✅ [DEBUG CORS] Origin permitida');
+
+            if (!origin) {
+                console.log('✅ [DEBUG CORS] Request sem origin - permitido');
+                return callback(null, true);
+            }
+
+            if (allowedOrigins.indexOf(origin) !== -1) {
+                console.log('✅ [DEBUG CORS] Origin permitida:', origin);
                 callback(null, true);
             } else {
                 console.log('❌ [DEBUG CORS] Origin bloqueada:', origin);
@@ -43,13 +45,20 @@ app.use(
             }
         },
         credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-device-id'],
     }),
 );
 
-console.log('🔍 [DEBUG APP] Configurando dotenv...');
-dotenv.config();
+app.use((req, res, next) => {
+    console.log(`📨 [DEBUG REQUEST] ${req.method} ${req.url}`, {
+        body: req.body,
+        headers: req.headers,
+    });
+    next();
+});
+
+app.use(express.json());
 
 console.log('🔍 [DEBUG APP] Configurando rotas...');
 app.use('/auth', authRoutes);
@@ -69,45 +78,85 @@ app.get('/health', (req, res) => {
     });
 });
 
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS',
+    );
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, x-device-id',
+    );
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(200).send();
+});
+
 console.log('🔍 [DEBUG APP] Configurando Swagger...');
 setupSwagger(app);
 
-console.log('🔍 [DEBUG APP] Chamando syncDatabase...');
-syncDatabase();
-
-const PORT = process.env.PORT || 3000;
-console.log(`🔍 [DEBUG APP] Iniciando servidor na porta ${PORT}...`);
-
-app.listen(PORT, async () => {
+async function startServer() {
     try {
-        console.log('🔄 [DEBUG APP] Testando conexão com banco no listener...');
-        await sequelize.authenticate();
-        console.log('✅ [DEBUG APP] Conectado ao banco de dados com sucesso!');
+        console.log('🔍 [DEBUG APP] Chamando syncDatabase...');
+        await syncDatabase();
+
         console.log(
-            '🚀 [DEBUG APP] Servidor rodando em https://lembramed-server.onrender.com',
+            '🔍 [DEBUG APP] Inicializando scheduler de medicamentos...',
         );
-        console.log(
-            '📄 [DEBUG APP] Documentação Swagger: https://lembramed-server.onrender.com/api-docs',
-        );
-        console.log(
-            '🔍 [DEBUG APP] Health check disponível em: http://localhost:' +
-                PORT +
-                '/health',
-        );
-    } catch (err) {
-        console.error(
-            '❌ [DEBUG APP] Erro ao conectar ao banco de dados: ',
-            err,
-        );
-        console.log('🔍 [DEBUG APP] Detalhes do erro:', err.message);
-        console.log('🔍 [DEBUG APP] Stack trace:', err.stack);
+        medicationScheduler.init();
+
+        const PORT = process.env.PORT || 3000;
+        console.log(`🔍 [DEBUG APP] Iniciando servidor na porta ${PORT}...`);
+
+        app.listen(PORT, async () => {
+            try {
+                console.log(
+                    '🔄 [DEBUG APP] Testando conexão com banco no listener...',
+                );
+                await sequelize.authenticate();
+                console.log(
+                    '✅ [DEBUG APP] Conectado ao banco de dados com sucesso!',
+                );
+
+                // 🔥 SÓ AGORA AS TABELAS EXISTEM!
+                startTokenCleanup();
+
+                console.log('🚀 [DEBUG APP] Servidor rodando na porta', PORT);
+                console.log(
+                    '🔐 [AUTH SYSTEM] Sistema de login infinito configurado',
+                );
+                console.log('   - Access Token: 1 dias');
+                console.log('   - Refresh Token: 7 dias');
+                console.log('   - Auto-refresh: Habilitado');
+                console.log('   - Cleanup: A cada 1 hora');
+            } catch (err) {
+                console.error(
+                    '❌ [DEBUG APP] Erro ao conectar ao banco de dados: ',
+                    err,
+                );
+            }
+        });
+    } catch (error) {
+        console.error('❌ [DEBUG APP] Erro ao iniciar servidor:', error);
+        process.exit(1);
     }
-});
+}
 
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ [DEBUG UNHANDLED] Rejeição não tratada:', reason);
-});
+const startTokenCleanup = () => {
+    TokenService.cleanupExpiredTokens(); // Primeira execução
 
-process.on('uncaughtException', (error) => {
-    console.error('❌ [DEBUG UNCAUGHT] Exceção não capturada:', error);
-});
+    setInterval(
+        () => {
+            console.log(
+                '🔄 [TOKEN CLEANUP] Iniciando limpeza de tokens expirados...',
+            );
+            TokenService.cleanupExpiredTokens();
+        },
+        60 * 60 * 1000,
+    );
+
+    console.log('✅ [TOKEN CLEANUP] Agendamento de limpeza configurado');
+};
+
+// INICIA O SERVIDOR
+startServer();

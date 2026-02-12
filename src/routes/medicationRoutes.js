@@ -5,9 +5,8 @@ import {
     getMedicationById,
     getMedicationHistory,
     createMedication,
-    markAsTaken,
-    registerMissedDose,
-    forceDoseAdvance,
+    registerPendingConfirmation,
+    cancelPendingDose,
     updateMedication,
     deleteMedication,
 } from '../controllers/medicationController.js';
@@ -15,14 +14,13 @@ import {
 const router = express.Router();
 router.use(authenticateToken);
 
-router.get('/:userid/search', findMedications);
-router.get('/:userid/:medicationid', getMedicationById);
-router.get('/:userid/:medicationid/history', getMedicationHistory);
-router.post('/:userid/create', createMedication);
-router.post('/:userid/:medicationid/taken', markAsTaken);
-router.post('/:userid/:medicationid/missed', registerMissedDose);
-router.post('/:userid/:medicationid/advance', forceDoseAdvance);
-router.put('/:userid/:medicationid', updateMedication);
-router.delete('/:userid/:medicationid', deleteMedication);
+router.get('/search', findMedications);
+router.get('/:medicationid', getMedicationById);
+router.get('/:medicationid/history', getMedicationHistory);
+router.post('/create', createMedication);
+router.post('/:medicationid/pending', registerPendingConfirmation);
+router.post('/:medicationid/cancel', cancelPendingDose);
+router.put('/:medicationid', updateMedication);
+router.delete('/:medicationid', deleteMedication);
 
 export default router;

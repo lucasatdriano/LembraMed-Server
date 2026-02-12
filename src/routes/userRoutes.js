@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', loginMultiAccount);
-router.get('/:userid', authenticateToken, getUserById);
-router.post('/:userid/logout', authenticateToken, logoutAccount);
+router.get('/', authenticateToken, getUserById);
+router.post('/logout', authenticateToken, logoutAccount);
 
 export default router;

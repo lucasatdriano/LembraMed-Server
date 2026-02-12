@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import nodemailer from 'nodemailer';
 import { models } from '../models/index.js';
 import { TokenService } from '../services/tokenService.js';
 
@@ -14,8 +13,11 @@ export async function refreshMultiAccountToken(req, res) {
             });
         }
 
-        const { accessToken, refreshToken: newRefreshToken } =
-            await TokenService.refreshTokens(refreshToken, deviceId);
+        const {
+            accessToken,
+            refreshToken: newRefreshToken,
+            userId,
+        } = await TokenService.refreshTokens(refreshToken, deviceId);
 
         await models.AccountDevice.update(
             {
@@ -24,7 +26,7 @@ export async function refreshMultiAccountToken(req, res) {
             },
             {
                 where: {
-                    userid: decoded.userId,
+                    userid: userId,
                     deviceid: deviceId,
                 },
             },
@@ -50,6 +52,31 @@ export async function refreshMultiAccountToken(req, res) {
     }
 }
 
+export async function tokenStatus(req, res) {
+    try {
+        const { refreshToken, deviceId } = req.query;
+
+        if (!refreshToken || !deviceId) {
+            return res.status(400).json({
+                error: 'Parâmetros necessários: refreshToken e deviceId',
+            });
+        }
+
+        const isValid = await TokenService.isValidRefreshToken(
+            refreshToken,
+            deviceId,
+        );
+
+        res.json({
+            isValid,
+            message: isValid ? 'Token válido' : 'Token inválido ou expirado',
+        });
+    } catch (error) {
+        console.error('Erro ao verificar token:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+}
+
 export async function forgotPassword(req, res) {
     const { email } = req.body;
 
@@ -71,13 +98,13 @@ export async function forgotPassword(req, res) {
                 ? `https://lembraMed.vercel.app/resetPassword/${token}`
                 : `http://localhost:3000/resetPassword/${token}`;
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+        // const transporter = nodemailer.createTransport({
+        //     service: 'gmail',
+        //     auth: {
+        //         user: process.env.EMAIL_USER,
+        //         pass: process.env.EMAIL_PASS,
+        //     },
+        // });
 
         const mailOptions = {
             from: process.env.EMAIL_USER,

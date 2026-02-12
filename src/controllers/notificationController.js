@@ -7,18 +7,19 @@ webpush.setVapidDetails(
     process.env.VAPID_PRIVATE_KEY,
 );
 
-export async function sendUserNotification(req, res) {
+export async function sendNotification(req, res) {
     try {
-        const { userid, title, message, tag } = req.body;
+        const { title, message, tag } = req.body;
+        const userId = req.user.userId;
 
-        if (!userid || !title) {
+        if (!title) {
             return res.status(400).json({
-                error: 'UserID e title são obrigatórios',
+                error: 'Title é obrigatório',
             });
         }
 
         const subscriptions = await models.PushSubscription.findAll({
-            where: { userid },
+            where: { userid: userId },
         });
 
         if (subscriptions.length === 0) {
@@ -30,8 +31,8 @@ export async function sendUserNotification(req, res) {
         const payload = JSON.stringify({
             title,
             body: message || '',
-            userid,
-            tag: tag || `notif-${userid}`,
+            userid: userId,
+            tag: tag || `notif-${userId}`,
             timestamp: new Date().toISOString(),
         });
 
@@ -71,7 +72,7 @@ export async function sendUserNotification(req, res) {
         const results = await Promise.all(sendPromises);
 
         await models.Notification.create({
-            userid,
+            userid: userId,
             title,
             message: message || null,
         });
@@ -94,13 +95,14 @@ export async function sendUserNotification(req, res) {
     }
 }
 
-export async function getUserNotifications(req, res) {
+export async function getNotifications(req, res) {
     try {
-        const { userid } = req.params;
         const { limit = 50, offset = 0 } = req.query;
+        const userId = req.user.userId;
 
         const notifications = await models.Notification.findAll({
-            where: { userid },
+            where: { userid: userId },
+            attributes: ['id', 'title', 'message', 'sentat', 'readat'],
             order: [['sentat', 'DESC']],
             limit: parseInt(limit),
             offset: parseInt(offset),
@@ -116,8 +118,14 @@ export async function getUserNotifications(req, res) {
 export async function markAsRead(req, res) {
     try {
         const { notificationId } = req.params;
+        const userId = req.user.userId;
 
-        const notification = await models.Notification.findByPk(notificationId);
+        const notification = await models.Notification.findOne({
+            where: {
+                id: notificationId,
+                userid: userId,
+            },
+        });
 
         if (!notification) {
             return res

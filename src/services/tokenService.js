@@ -12,7 +12,7 @@ export class TokenService {
                     type: 'multi-account',
                 },
                 process.env.JWT_SECRET,
-                { expiresIn: '1h' },
+                { expiresIn: '1d' },
             );
 
             const refreshToken = jwt.sign(
@@ -22,17 +22,17 @@ export class TokenService {
                     type: 'refresh',
                 },
                 process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-                { expiresIn: '60d' },
+                { expiresIn: '7d' },
             );
 
             await models.RefreshToken.create({
                 token: refreshToken,
                 userid: userId,
                 deviceid: deviceId,
-                expiresat: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 dias
+                expiresat: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7d
             });
 
-            return { accessToken, refreshToken };
+            return { accessToken, refreshToken, userId };
         } catch (error) {
             console.error('Erro ao gerar tokens:', error);
             throw error;
@@ -46,15 +46,12 @@ export class TokenService {
                     token: oldRefreshToken,
                     deviceid: deviceId,
                     revoked: false,
+                    expiresat: { [Op.gt]: new Date() },
                 },
             });
 
             if (!storedToken) {
-                throw new Error('Refresh token não encontrado');
-            }
-
-            if (new Date() > storedToken.expiresat) {
-                throw new Error('Refresh token expirado');
+                throw new Error('Refresh token não encontrado ou expirado');
             }
 
             const decoded = jwt.verify(
@@ -64,9 +61,24 @@ export class TokenService {
 
             await storedToken.update({ revoked: true });
 
-            return await this.generateTokens(decoded.userId, deviceId);
+            const { accessToken, refreshToken: newRefreshToken } =
+                await this.generateTokens(decoded.userId, deviceId);
+
+            return {
+                accessToken,
+                refreshToken: newRefreshToken,
+                userId: decoded.userId,
+            };
         } catch (error) {
             console.error('Erro ao refresh tokens:', error);
+
+            if (
+                error.name === 'JsonWebTokenError' ||
+                error.name === 'TokenExpiredError'
+            ) {
+                await this.revokeAllUserTokens(null, deviceId);
+            }
+
             throw error;
         }
     }

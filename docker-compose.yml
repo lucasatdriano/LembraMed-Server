@@ -22,7 +22,7 @@ services:
             - '3000:3000'
         environment:
             - PORT=${PORT}
-            - DB_HOST=db
+            - DB_HOST=db_lembraMed
             - DB_USER=${DB_USER}
             - DB_PASS=${DB_PASS}
             - DB_NAME=${DB_NAME}

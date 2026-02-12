@@ -105,10 +105,10 @@ export async function loginMultiAccount(req, res) {
 }
 
 export async function getUserById(req, res) {
-    const { userid } = req.params;
-
     try {
-        const user = await models.User.findByPk(userid, {
+        const userId = req.user.userId;
+
+        const user = await models.User.findByPk(userId, {
             attributes: ['id', 'name', 'username', 'password', 'createdat'],
         });
 
@@ -124,22 +124,23 @@ export async function getUserById(req, res) {
 
 export async function logoutAccount(req, res) {
     try {
-        const { userid, deviceId } = req.body;
+        const { deviceId } = req.body;
+        const userId = req.user.userId;
 
-        if (!userid || !deviceId) {
+        if (!deviceId) {
             return res.status(400).json({
-                error: 'UserID e deviceId são obrigatórios',
+                error: 'DeviceId é obrigatório',
             });
         }
 
-        await TokenService.revokeAllUserTokens(userid, deviceId);
+        await TokenService.revokeAllUserTokens(userId, deviceId);
 
         await models.AccountDevice.destroy({
-            where: { userid, deviceid: deviceId },
+            where: { userid: userId, deviceid: deviceId },
         });
 
         await models.PushSubscription.destroy({
-            where: { userid, deviceid: deviceId },
+            where: { userid: userId, deviceid: deviceId },
         });
 
         res.json({
