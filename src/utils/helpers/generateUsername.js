@@ -1,4 +1,4 @@
-import { models } from '../models/index.js';
+import { models } from '../../models/index.js';
 
 function generateBaseUsername(name) {
     return name

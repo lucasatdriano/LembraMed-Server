@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { models } from '../models/index.js';
 import { TokenService } from '../services/tokenService.js';
+import { timezone } from '../utils/formatters/timezone.js';
 
 export async function refreshMultiAccountToken(req, res) {
     try {
@@ -22,7 +23,7 @@ export async function refreshMultiAccountToken(req, res) {
         await models.AccountDevice.update(
             {
                 accesstoken: accessToken,
-                lastused: new Date(),
+                lastused: timezone.now(),
             },
             {
                 where: {

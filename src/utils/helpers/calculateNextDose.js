@@ -1,6 +1,8 @@
+import { timezone } from '../formatters/timezone.js';
+
 export function calculateNextDose(lastDoseTime, intervalinhours) {
     const [hours, minutes] = lastDoseTime.split(':').map(Number);
-    const date = new Date();
+    const date = timezone.now();
     date.setHours(hours);
     date.setMinutes(minutes);
     date.setSeconds(0);

@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { models } from '../models/index.js';
+import { timezone } from '../utils/formatters/timezone.js';
 
 webpush.setVapidDetails(
     process.env.VAPID_SUBJECT,
@@ -33,7 +34,7 @@ export async function sendNotification(req, res) {
             body: message || '',
             userid: userId,
             tag: tag || `notif-${userId}`,
-            timestamp: new Date().toISOString(),
+            timestamp: timezone.now().toISOString(),
         });
 
         const sendPromises = subscriptions.map(async (sub) => {
@@ -48,7 +49,7 @@ export async function sendNotification(req, res) {
             try {
                 await webpush.sendNotification(subscription, payload);
 
-                await sub.update({ lastused: new Date() });
+                await sub.update({ lastused: timezone.now() });
 
                 return { success: true, subscriptionId: sub.id };
             } catch (error) {
@@ -133,7 +134,7 @@ export async function markAsRead(req, res) {
                 .json({ error: 'Notificação não encontrada' });
         }
 
-        await notification.update({ readat: new Date() });
+        await notification.update({ readat: timezone.now() });
 
         res.json({
             success: true,

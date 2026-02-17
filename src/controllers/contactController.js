@@ -1,12 +1,15 @@
 import { Op } from 'sequelize';
 import { models } from '../models/index.js';
+import { validationContact } from '../utils/validations/contactValidation.js';
 
 export async function getContacts(req, res) {
     const { page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
     try {
-        const offset = (page - 1) * limit;
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const offset = (pageNumber - 1) * limitNumber;
 
         const { count, rows: contacts } = await models.Contact.findAndCountAll({
             where: { userid: userId },
@@ -66,7 +69,9 @@ export async function findContacts(req, res) {
 
     try {
         const whereClause = { userid: userId };
-        const offset = (page - 1) * limit;
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const offset = (pageNumber - 1) * limitNumber;
 
         if (search) {
             const searchLower = search.toLowerCase();
@@ -118,14 +123,43 @@ export async function createContact(req, res) {
     const { name, numberphone } = req.body;
 
     try {
-        const newContact = await models.Contact.create({
-            name: name.toLowerCase(),
+        const validationResult = validationContact.contact({
+            name,
             numberphone,
+        });
+
+        if (!validationResult.isValid) {
+            console.log('❌ Erros de validação:', validationResult.errors);
+            return res.status(400).json({
+                error: 'Dados inválidos',
+                details: validationResult.errors,
+            });
+        }
+
+        const newContact = await models.Contact.create({
+            name: name.toLowerCase().trim(),
+            numberphone: numberphone.trim(),
             userid: userId,
         });
 
         res.status(201).json(newContact);
     } catch (error) {
+        console.error('❌ Erro ao criar contato:', error);
+
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                error: 'Erro ao criar contato',
+                details: ['Este número de telefone já está cadastrado'],
+            });
+        }
+
+        if (error.name === 'SequelizeValidationError') {
+            return res.status(400).json({
+                error: 'Erro de validação',
+                details: error.errors.map((e) => e.message),
+            });
+        }
+
         res.status(500).json({
             error: 'Erro ao criar contato.',
             details: error.message,
@@ -139,6 +173,25 @@ export async function updateContact(req, res) {
     const { name, numberphone } = req.body;
 
     try {
+        const errors = [];
+
+        if (name) {
+            const nameValidation = validationContact.contactName(name);
+            errors.push(...nameValidation.errors);
+        }
+
+        if (numberphone) {
+            const phoneValidation = validationContact.phoneNumber(numberphone);
+            errors.push(...phoneValidation.errors);
+        }
+
+        if (errors.length > 0) {
+            return res.status(400).json({
+                error: 'Dados inválidos',
+                details: errors,
+            });
+        }
+
         const contact = await models.Contact.findOne({
             where: {
                 id: contactid,
@@ -150,13 +203,31 @@ export async function updateContact(req, res) {
             return res.status(404).json({ error: 'Contato não encontrado.' });
         }
 
-        contact.name = name.toLowerCase() || contact.name;
-        contact.numberphone = numberphone || contact.numberphone;
+        if (name) contact.name = name.toLowerCase().trim();
+        if (numberphone) contact.numberphone = numberphone.trim();
 
         await contact.save();
 
         res.status(200).json(contact);
     } catch (error) {
+        console.error('❌ Erro ao atualizar contato:', error);
+
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                error: 'Erro ao atualizar contato',
+                details: [
+                    'Este número de telefone já está cadastrado para outro contato',
+                ],
+            });
+        }
+
+        if (error.name === 'SequelizeValidationError') {
+            return res.status(400).json({
+                error: 'Erro de validação',
+                details: error.errors.map((e) => e.message),
+            });
+        }
+
         res.status(500).json({
             error: 'Erro ao atualizar contato.',
             details: error.message,

@@ -1,5 +1,6 @@
 import { models } from '../models/index.js';
 import { TokenService } from '../services/tokenService.js';
+import { timezone } from '../utils/formatters/timezone.js';
 
 export async function getDeviceAccounts(req, res) {
     try {
@@ -58,7 +59,7 @@ export async function registerPushSubscription(req, res) {
             endpoint: subscription.endpoint,
             p256dh: subscription.keys.p256dh,
             auth: subscription.keys.auth,
-            lastused: new Date(),
+            lastused: timezone.now(),
         });
 
         res.json({

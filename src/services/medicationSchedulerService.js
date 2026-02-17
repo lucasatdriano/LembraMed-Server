@@ -1,47 +1,59 @@
 import cron from 'node-cron';
 import { models } from '../models/index.js';
 import { Op } from 'sequelize';
-import { format, toZonedTime } from 'date-fns-tz';
-import { calcularTolerancia } from '../utils/doseRules.js'; // 🔴 FALTANDO!
+import { calcularTolerancia } from '../utils/helpers/doseRules.js';
+import { timezone } from '../utils/formatters/timezone.js';
 
 class MedicationScheduler {
     constructor() {
         this.initialized = false;
         this.timeZone = 'America/Sao_Paulo';
+        this.executionCount = 0;
     }
 
     init() {
         if (this.initialized) return;
 
-        console.log('⏰ Iniciando scheduler de medicamentos...');
-        console.log(`🌎 Fuso horário configurado: ${this.timeZone}`);
+        console.log('\n⏰ ========== INICIANDO SCHEDULER ==========');
+        console.log(`⏰ Fuso horário configurado: ${this.timeZone}`);
 
+        // RODA A CADA 1 MINUTO
         cron.schedule('* * * * *', () => {
+            this.executionCount++;
+            const agora = timezone.now();
+
+            console.log(
+                `\n⏰ [CRON #${this.executionCount}] DISPAROU! ${agora.toISOString()}`,
+            );
+            console.log(
+                `⏰ [CRON] Hora local: ${agora.getHours()}:${agora.getMinutes()}:${agora.getSeconds()}`,
+            );
             this.checkMedications();
         });
 
         this.initialized = true;
-    }
-
-    getLocalTime() {
-        const agora = new Date();
-        const zonedDate = toZonedTime(agora, this.timeZone);
-        return {
-            horaLocal: format(zonedDate, 'HH:mm'),
-            dataLocal: format(zonedDate, 'yyyy-MM-dd HH:mm:ss'),
-            dataOriginal: agora,
-        };
+        console.log(`⏰ ========== SCHEDULER INICIALIZADO ==========\n`);
     }
 
     async checkMedications() {
         try {
-            // ✅ CASO 1: Confirmar doses pendentes (3 minutos já passaram)
+            console.log(
+                `\n🔍 [SCHEDULER #${this.executionCount}] VERIFICANDO MEDICAMENTOS...`,
+            );
+
+            const agora = timezone.now();
+            console.log(
+                `🔍 [SCHEDULER] Data/hora atual: ${agora.toISOString()}`,
+            );
+
+            console.log(`\n🔍 [SCHEDULER] BUSCANDO DOSES PARA CONFIRMAR...`);
+
             const dosesParaConfirmar = await models.Medication.findAll({
                 where: {
                     status: true,
                     pendingconfirmation: true,
                     pendinguntil: {
-                        [Op.lte]: new Date(), // Já passou dos 3 minutos
+                        [Op.lte]: agora,
                     },
                 },
                 include: [
@@ -52,16 +64,20 @@ class MedicationScheduler {
                     },
                 ],
             });
+
+            console.log(
+                `🔍 [SCHEDULER] Encontradas ${dosesParaConfirmar.length} doses para confirmar`,
+            );
 
             for (const med of dosesParaConfirmar) {
                 await this.confirmDose(med);
             }
 
-            // ✅ CASO 2: Detectar doses perdidas (passou da tolerância)
-            const medicamentosAtrasados = await models.Medication.findAll({
+            console.log(`\n🔍 [SCHEDULER] BUSCANDO DOSES PERDIDAS...`);
+
+            const todosMedicamentos = await models.Medication.findAll({
                 where: {
-                    status: false, // Não tomou
-                    pendingconfirmation: false, // Não está em confirmação
+                    pendingconfirmation: false,
                 },
                 include: [
                     {
@@ -72,115 +88,166 @@ class MedicationScheduler {
                 ],
             });
 
-            for (const med of medicamentosAtrasados) {
-                await this.checkMissedDose(med);
+            for (const med of todosMedicamentos) {
+                await this.checkMissedDose(med, agora);
             }
+
+            console.log(
+                `\n✅ [SCHEDULER #${this.executionCount}] VERIFICAÇÃO CONCLUÍDA\n`,
+            );
         } catch (error) {
-            console.error('❌ Erro no scheduler:', error);
+            console.error('❌ [SCHEDULER] ERRO:', error);
         }
     }
 
-    /**
-     * ✅ Confirmar dose APÓS 3 minutos (ÚNICA FUNÇÃO CORRETA)
-     */
     async confirmDose(medication) {
         try {
-            console.log(`✅ Confirmando dose: ${medication.name}`);
-            console.log(`   Horário agendado: ${medication.hournextdose}`);
-            console.log(`   PendingUntil: ${medication.pendinguntil}`);
-
-            // 1. Registra no histórico como TOMADO
-            await models.MedicationHistory.create({
-                medicationid: medication.id,
-                takendate: new Date(),
-                taken: true,
-            });
-
-            // 2. Salva a hora que ele tomou
-            const agora = new Date();
-            const horaTomada = `${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
-
-            // 3. Calcula PRÓXIMO horário baseado no horário CORRETO
-            const proximoHorario = this.calcularProximoHorario(
-                medication.hournextdose, // USA O HORÁRIO AGENDADO!
-                medication.doseinterval.intervalinhours,
+            console.log(
+                `\n✅ [CONFIRM_DOSE] ========== CONFIRMANDO DOSE ==========`,
+            );
+            console.log(
+                `✅ [CONFIRM_DOSE] Medicamento: ${medication.name} (ID: ${medication.id})`,
+            );
+            console.log(
+                `✅ [CONFIRM_DOSE] Horário programado: ${medication.hournextdose}`,
+            );
+            console.log(
+                `✅ [CONFIRM_DOSE] PendingUntil: ${medication.pendinguntil}`,
             );
 
-            // 4. Reseta o medicamento
+            const agora = timezone.now();
+
+            const history = await models.MedicationHistory.create({
+                medicationid: medication.id,
+                takendate: agora,
+                taken: true,
+            });
+            console.log(`✅ [CONFIRM_DOSE] Histórico criado ID: ${history.id}`);
+
+            const horaTomada = `${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+
+            const proximoHorario = this.calcularProximoHorario(
+                medication.hournextdose,
+                medication.doseinterval.intervalinhours,
+            );
+            console.log(
+                `✅ [CONFIRM_DOSE] Próximo horário calculado: ${proximoHorario}`,
+            );
+
             await medication.update({
-                status: false, // ✅ Isso já faz!
+                status: false,
                 pendingconfirmation: false,
                 pendinguntil: null,
                 lasttakentime: horaTomada,
                 hournextdose: proximoHorario,
             });
 
-            this.notifyMedicationUpdated(medication.id, {
-                status: false,
-                pendingConfirmation: false,
-                pendingUntil: null,
-                hournextdose: proximoHorario,
-            });
-
-            console.log(`✅ Dose confirmada: ${medication.name}`);
-            console.log(`   Próximo horário: ${proximoHorario}`);
-            console.log(`   Hora tomada: ${horaTomada}`);
+            console.log(`✅ [CONFIRM_DOSE] Medicamento ATUALIZADO:`);
+            console.log(`   - status: false`);
+            console.log(`   - pendingconfirmation: false`);
+            console.log(`   - pendinguntil: null`);
+            console.log(`   - lasttakentime: ${horaTomada}`);
+            console.log(`   - hournextdose: ${proximoHorario}`);
+            console.log(
+                `✅ [CONFIRM_DOSE] ========== DOSE CONFIRMADA ==========\n`,
+            );
         } catch (error) {
-            console.error(`❌ Erro ao confirmar dose ${medication.id}:`, error);
+            console.error(`❌ [CONFIRM_DOSE] ERRO:`, error);
         }
     }
 
-    /**
-     * ⏰ Verificar dose perdida (tolerância de 1/5 do intervalo)
-     */
-    async checkMissedDose(medication) {
+    async checkMissedDose(medication, agora) {
         try {
+            // Se está em confirmação pendente, não verifica como perdida
+            if (medication.pendingconfirmation) {
+                return;
+            }
+
+            console.log(
+                `\n⏰ [CHECK_MISSED] ========== VERIFICANDO DOSE PERDIDA ==========`,
+            );
+            console.log(`⏰ [CHECK_MISSED] Medicamento: ${medication.name}`);
+            console.log(
+                `⏰ [CHECK_MISSED] Horário programado: ${medication.hournextdose}`,
+            );
+
+            // Converte o horário programado para Date de HOJE
+            const [horas, minutos] = medication.hournextdose
+                .split(':')
+                .map(Number);
+            const horarioProgramado = new Date(agora);
+            horarioProgramado.setHours(horas, minutos, 0, 0);
+
+            if (agora < horarioProgramado) {
+                console.log(
+                    `⏰ [CHECK_MISSED] ⏩ HORÁRIO AINDA NÃO CHEGOU - IGNORANDO ${horarioProgramado} ${agora}`,
+                );
+                return;
+            }
+
             const toleranciaMinutos = calcularTolerancia(
                 medication.doseinterval.intervalinhours,
             );
 
-            const [horas, minutos] = medication.hournextdose
-                .split(':')
-                .map(Number);
-            const horarioCorreto = new Date();
-            horarioCorreto.setHours(horas, minutos, 0, 0);
-
             const diffMinutos =
-                (Date.now() - horarioCorreto.getTime()) / (60 * 1000);
+                (agora.getTime() - horarioProgramado.getTime()) / (60 * 1000);
+
+            console.log(
+                `⏰ [CHECK_MISSED] Tolerância: ${toleranciaMinutos}min`,
+            );
+            console.log(
+                `⏰ [CHECK_MISSED] Atraso: ${Math.round(diffMinutos)}min`,
+            );
 
             if (diffMinutos > toleranciaMinutos) {
-                console.log(`⏰ DOSE PERDIDA: ${medication.name}`);
-                console.log(`   Horário: ${medication.hournextdose}`);
-                console.log(`   Tolerância: ${toleranciaMinutos}min`);
-                console.log(`   Atraso: ${Math.round(diffMinutos)}min`);
+                console.log(`⏰ [CHECK_MISSED] ⚠️ DOSE PERDIDA DETECTADA!`);
 
-                // Registra como NÃO TOMADO
+                const ultimoRegistro = await models.MedicationHistory.findOne({
+                    where: {
+                        medicationid: medication.id,
+                        takendate: {
+                            [Op.gte]: timezone.now(Date.now() - 5 * 60 * 1000),
+                        },
+                    },
+                    order: [['takendate', 'DESC']],
+                });
+
+                if (ultimoRegistro) {
+                    console.log(
+                        `⏰ [CHECK_MISSED] ⚠️ JÁ REGISTRADO - IGNORANDO`,
+                    );
+                    return;
+                }
+
                 await models.MedicationHistory.create({
                     medicationid: medication.id,
-                    takendate: new Date(),
+                    takendate: agora,
                     taken: false,
                 });
 
-                // Calcula próximo horário
                 const proximoHorario = this.calcularProximoHorario(
                     medication.hournextdose,
                     medication.doseinterval.intervalinhours,
                 );
+                console.log(
+                    `⏰ [CHECK_MISSED] Próximo horário: ${proximoHorario}`,
+                );
 
                 await medication.update({
                     hournextdose: proximoHorario,
-                    status: false,
-                    pendingconfirmation: false,
-                    pendinguntil: null,
                 });
 
-                console.log(`   Próximo horário: ${proximoHorario}`);
+                console.log(`⏰ [CHECK_MISSED] Medicamento ATUALIZADO:`);
+                console.log(`   - hournextdose: ${proximoHorario}`);
+            } else {
+                console.log(
+                    `⏰ [CHECK_MISSED] ✅ Dentro da tolerância - aguardando`,
+                );
             }
+
+            console.log(`⏰ [CHECK_MISSED] ========== FIM ==========\n`);
         } catch (error) {
-            console.error(
-                `❌ Erro ao verificar dose perdida ${medication.id}:`,
-                error,
-            );
+            console.error(`❌ [CHECK_MISSED] ERRO:`, error);
         }
     }
 
@@ -195,12 +262,6 @@ class MedicationScheduler {
 
         return `${novasHoras.toString().padStart(2, '0')}:${novosMinutos.toString().padStart(2, '0')}`;
     }
-
-    // ❌ REMOVER função duplicada!
-    // async confirmPendingDose(medication) { ... }
-
-    // ❌ REMOVER função não utilizada!
-    // async processMedicationTime(medication) { ... }
 }
 
 export default new MedicationScheduler();

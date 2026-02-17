@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import { models } from '../models/index.js';
+import { timezone } from '../utils/formatters/timezone.js';
 
 export class TokenService {
     static async generateTokens(userId, deviceId) {
@@ -29,7 +30,7 @@ export class TokenService {
                 token: refreshToken,
                 userid: userId,
                 deviceid: deviceId,
-                expiresat: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7d
+                expiresat: timezone.now(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7d
             });
 
             return { accessToken, refreshToken, userId };
@@ -46,7 +47,7 @@ export class TokenService {
                     token: oldRefreshToken,
                     deviceid: deviceId,
                     revoked: false,
-                    expiresat: { [Op.gt]: new Date() },
+                    expiresat: { [Op.gt]: timezone.now() },
                 },
             });
 
@@ -111,7 +112,7 @@ export class TokenService {
                 where: {
                     [Op.or]: [
                         { revoked: true },
-                        { expiresat: { [Op.lt]: new Date() } },
+                        { expiresat: { [Op.lt]: timezone.now() } },
                     ],
                 },
             });
@@ -129,7 +130,7 @@ export class TokenService {
                     token: token,
                     deviceid: deviceId,
                     revoked: false,
-                    expiresat: { [Op.gt]: new Date() },
+                    expiresat: { [Op.gt]: timezone.now() },
                 },
             });
 

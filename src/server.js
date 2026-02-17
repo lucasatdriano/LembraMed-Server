@@ -14,6 +14,7 @@ import contactRoutes from './routes/contactRoutes.js';
 import medicationRoutes from './routes/medicationRoutes.js';
 import { TokenService } from './services/tokenService.js';
 import medicationScheduler from './services/medicationSchedulerService.js';
+import { timezone } from './utils/formatters/timezone.js';
 
 const app = express();
 
@@ -73,7 +74,7 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'OK',
         message: 'Servidor rodando',
-        timestamp: new Date().toISOString(),
+        timestamp: timezone.now().toISOString(),
         environment: process.env.NODE_ENV,
     });
 });
@@ -118,7 +119,6 @@ async function startServer() {
                     '✅ [DEBUG APP] Conectado ao banco de dados com sucesso!',
                 );
 
-                // 🔥 SÓ AGORA AS TABELAS EXISTEM!
                 startTokenCleanup();
 
                 console.log('🚀 [DEBUG APP] Servidor rodando na porta', PORT);
@@ -143,7 +143,7 @@ async function startServer() {
 }
 
 const startTokenCleanup = () => {
-    TokenService.cleanupExpiredTokens(); // Primeira execução
+    TokenService.cleanupExpiredTokens();
 
     setInterval(
         () => {
@@ -158,5 +158,4 @@ const startTokenCleanup = () => {
     console.log('✅ [TOKEN CLEANUP] Agendamento de limpeza configurado');
 };
 
-// INICIA O SERVIDOR
 startServer();

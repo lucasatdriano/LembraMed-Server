@@ -1,24 +1,58 @@
-import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { models } from '../models/index.js';
-import { generateUniqueUsername } from '../utils/generateUsername.js';
+import { generateUniqueUsername } from '../utils/helpers/generateUsername.js';
 import { TokenService } from '../services/tokenService.js';
+import { timezone } from '../utils/formatters/timezone.js';
+import { validationUser } from '../utils/validations/userValidation.js';
 
 export async function register(req, res) {
     const { name, password } = req.body;
 
     try {
+        const validationResult = validationUser.register({ name, password });
+
+        if (!validationResult.isValid) {
+            console.log('❌ Erros de validação:', validationResult.errors);
+            return res.status(400).json({
+                error: 'Dados inválidos',
+                details: validationResult.errors,
+            });
+        }
+
         const username = await generateUniqueUsername(name);
 
         const newUser = await models.User.create({
             id: uuidv4(),
-            name,
+            name: name.trim(),
             username: username,
             password,
         });
 
-        res.status(201).json(newUser);
+        const userResponse = {
+            id: newUser.id,
+            name: newUser.name,
+            username: newUser.username,
+            createdat: newUser.createdat,
+        };
+
+        res.status(201).json(userResponse);
     } catch (error) {
+        console.error('❌ Erro ao cadastrar usuário:', error);
+
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                error: 'Erro ao cadastrar',
+                details: ['Este nome de usuário já está em uso'],
+            });
+        }
+
+        if (error.name === 'SequelizeValidationError') {
+            return res.status(400).json({
+                error: 'Erro de validação',
+                details: error.errors.map((e) => e.message),
+            });
+        }
+
         res.status(500).json({
             error: 'Erro ao cadastrar usuário.',
             details: error.message,
@@ -30,9 +64,16 @@ export async function loginMultiAccount(req, res) {
     try {
         const { username, password, deviceId, deviceName } = req.body;
 
-        if (!username || !password || !deviceId) {
+        const validationResult = validationUser.login({
+            username,
+            password,
+            deviceId,
+        });
+
+        if (!validationResult.isValid) {
             return res.status(400).json({
-                error: 'Username, password e deviceId são obrigatórios',
+                error: 'Dados inválidos',
+                details: validationResult.errors,
             });
         }
 
@@ -41,24 +82,29 @@ export async function loginMultiAccount(req, res) {
         });
 
         if (!user) {
-            return res.status(401).json({ error: 'Credenciais inválidas' });
+            return res.status(401).json({
+                error: 'Credenciais inválidas',
+                details: ['Usuário não encontrado'],
+            });
         }
 
-        const validPassword = password === user.password;
-        if (!validPassword) {
-            return res.status(401).json({ error: 'Credenciais inválidas' });
+        if (password !== user.password) {
+            return res.status(401).json({
+                error: 'Credenciais inválidas',
+                details: ['Senha incorreta'],
+            });
         }
 
         const [device] = await models.Device.findOrCreate({
             where: { id: deviceId },
             defaults: {
                 name:
-                    deviceName ||
-                    `Dispositivo ${new Date().toLocaleDateString()}`,
+                    deviceName?.trim() ||
+                    `Dispositivo ${timezone.now().toLocaleDateString('pt-BR')}`,
             },
         });
 
-        await device.update({ lastseen: new Date() });
+        await device.update({ lastseen: timezone.now() });
 
         const { accessToken, refreshToken } = await TokenService.generateTokens(
             user.id,
@@ -78,7 +124,7 @@ export async function loginMultiAccount(req, res) {
         if (!accountDevice.isNewRecord) {
             await accountDevice.update({
                 accesstoken: accessToken,
-                lastused: new Date(),
+                lastused: timezone.now(),
             });
         }
 
@@ -96,10 +142,18 @@ export async function loginMultiAccount(req, res) {
             deviceId,
         });
     } catch (error) {
-        console.error('Erro no login multi-conta:', error);
+        console.error('❌ Erro no login multi-conta:', error);
+
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(500).json({
+                error: 'Erro na geração de tokens',
+                details: ['Falha ao gerar tokens de autenticação'],
+            });
+        }
+
         res.status(500).json({
             error: 'Erro interno do servidor',
-            details: error.message,
+            details: [error.message],
         });
     }
 }

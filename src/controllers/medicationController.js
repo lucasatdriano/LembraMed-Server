@@ -1,14 +1,18 @@
 import { Sequelize, Op } from 'sequelize';
 import { models } from '../models/index.js';
-import { calculateNextDose } from '../utils/calculateNextDose.js';
-import { calcularTolerancia } from '../utils/doseRules.js';
+import { calculateNextDose } from '../utils/helpers/calculateNextDose.js';
+import { timezone } from '../utils/formatters/timezone.js';
+import { calcularTolerancia } from '../utils/helpers/doseRules.js';
+import { validationMedication } from '../utils/validations/medicationValidation.js';
 
 export async function getMedications(req, res) {
     const { page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
     try {
-        const offset = (page - 1) * limit;
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const offset = (pageNumber - 1) * limitNumber;
 
         const { count, rows: medications } =
             await models.Medication.findAndCountAll({
@@ -24,6 +28,13 @@ export async function getMedications(req, res) {
                     'pendinguntil',
                     'lasttakentime',
                     'createdat',
+                    [
+                        Sequelize.literal(`
+                            EXTRACT(HOUR FROM hournextdose) * 60 + 
+                            EXTRACT(MINUTE FROM hournextdose)
+                        `),
+                        'nextdoseminutes',
+                    ],
                 ],
                 include: [
                     {
@@ -38,7 +49,7 @@ export async function getMedications(req, res) {
                         order: [['createdat', 'DESC']],
                     },
                 ],
-                order: [['hournextdose', 'ASC']],
+                order: [[Sequelize.literal('nextdoseminutes'), 'ASC']],
                 limit: parseInt(limit),
                 offset: offset,
             });
@@ -121,7 +132,9 @@ export async function findMedications(req, res) {
 
     try {
         const whereClause = { userid: userId };
-        const offset = (page - 1) * limit;
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const offset = (pageNumber - 1) * limitNumber;
 
         if (search) {
             const searchLower = search.toLowerCase();
@@ -160,6 +173,7 @@ export async function findMedications(req, res) {
                         attributes: ['intervalinhours'],
                     },
                 ],
+                order: [['hournextdose', 'ASC']],
                 limit: parseInt(limit),
                 offset: offset,
             });
@@ -212,15 +226,18 @@ export async function getMedicationHistory(req, res) {
 
         if (startDate || endDate) {
             whereClause.takendate = {};
-            if (startDate) whereClause.takendate[Op.gte] = new Date(startDate);
-            if (endDate) whereClause.takendate[Op.lte] = new Date(endDate);
+            if (startDate)
+                whereClause.takendate[Op.gte] = timezone.now(startDate);
+            if (endDate) whereClause.takendate[Op.lte] = timezone.now(endDate);
         }
 
         if (status && status !== 'all') {
             whereClause.taken = status === 'taken';
         }
 
-        const offset = (page - 1) * limit;
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+        const offset = (pageNumber - 1) * limitNumber;
 
         const { count, rows: history } =
             await models.MedicationHistory.findAndCountAll({
@@ -255,6 +272,22 @@ export async function createMedication(req, res) {
     const userId = req.user.userId;
 
     try {
+        const validationResult = validationMedication.medication({
+            name,
+            hourfirstdose,
+            periodstart,
+            periodend,
+            intervalinhours,
+        });
+
+        if (!validationResult.isValid) {
+            console.log('❌ Erros de validação:', validationResult.errors);
+            return res.status(400).json({
+                error: 'Dados inválidos',
+                details: validationResult.errors,
+            });
+        }
+
         let doseInterval = await models.DoseIntervals.findOne({
             where: { intervalinhours },
         });
@@ -265,20 +298,21 @@ export async function createMedication(req, res) {
             });
         }
 
-        const hournextdose = calculateNextDose(hourfirstdose, intervalinhours);
+        const adjustedPeriodStart = timezone.startOfDay(periodstart);
+        const adjustedPeriodEnd = timezone.endOfDay(periodend);
 
         const newMedication = await models.Medication.create({
-            name: name.toLowerCase(),
+            name: name.toLowerCase().trim(),
             hourfirstdose,
-            periodstart,
-            periodend,
+            periodstart: adjustedPeriodStart,
+            periodend: adjustedPeriodEnd,
             status: false,
             pendingconfirmation: false,
             pendinguntil: null,
             lasttakentime: null,
             userid: userId,
             doseintervalid: doseInterval.id,
-            hournextdose,
+            hournextdose: hourfirstdose,
         });
 
         const medicationWithDetails = await models.Medication.findByPk(
@@ -296,7 +330,15 @@ export async function createMedication(req, res) {
 
         res.status(201).json(medicationWithDetails);
     } catch (error) {
-        console.error('Erro ao criar medicamento:', error);
+        console.error('❌ Erro ao criar medicamento:', error);
+
+        if (error.name === 'SequelizeValidationError') {
+            return res.status(400).json({
+                error: 'Erro de validação',
+                details: error.errors.map((e) => e.message),
+            });
+        }
+
         res.status(500).json({
             error: 'Erro ao criar medicamento.',
             details: error.message,
@@ -308,13 +350,19 @@ export async function createMedication(req, res) {
  * 🟢 PASSO 1: Usuário clica "Tomei" (duplo clique)
  * - Marca como pendente de confirmação
  * - Adiciona 3 minutos ao horário correto
- * - Se tiver adiantado, aguarda até horário correto + 3
  */
 export async function registerPendingConfirmation(req, res) {
     const { medicationid } = req.params;
     const userId = req.user.userId;
 
     try {
+        console.log(`\n🔵 [REGISTER_PENDING] ========== INÍCIO ==========`);
+        console.log(`🔵 [REGISTER_PENDING] Medicamento ID: ${medicationid}`);
+        console.log(`🔵 [REGISTER_PENDING] Usuário ID: ${userId}`);
+
+        const agora = timezone.now();
+        console.log(`🔵 [REGISTER_PENDING] Timestamp: ${agora.toISOString()}`);
+
         const medication = await models.Medication.findOne({
             where: { id: medicationid, userid: userId },
             include: [
@@ -327,30 +375,97 @@ export async function registerPendingConfirmation(req, res) {
         });
 
         if (!medication) {
+            console.log(`🔴 [REGISTER_PENDING] Medicamento NÃO encontrado!`);
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
 
-        const agora = new Date();
+        console.log(
+            `🔵 [REGISTER_PENDING] Medicamento encontrado: ${medication.name}`,
+        );
+        console.log(`🔵 [REGISTER_PENDING] Estado ATUAL:`);
+        console.log(`   - status: ${medication.status}`);
+        console.log(
+            `   - pendingconfirmation: ${medication.pendingconfirmation}`,
+        );
+        console.log(`   - pendinguntil: ${medication.pendinguntil}`);
+        console.log(`   - hournextdose: ${medication.hournextdose}`);
+
         const horaAtual = `${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
         const horaCorreta = medication.hournextdose;
 
-        // ⏱️ CORREÇÃO: SEMPRE adiciona 3 minutos a partir de AGORA!
-        const pendingUntil = new Date(agora.getTime() + 3 * 60 * 1000);
+        const [horas, minutos] = horaCorreta.split(':').map(Number);
+        const horarioProgramado = new Date(agora);
+        horarioProgramado.setHours(horas, minutos, 0, 0);
 
-        // ✅ Marca como aguardando confirmação
+        const toleranciaMinutos = calcularTolerancia(
+            medication.doseinterval.intervalinhours,
+        );
+
+        const diffMinutos =
+            (agora.getTime() - horarioProgramado.getTime()) / (60 * 1000);
+
+        console.log(
+            `🔵 [REGISTER_PENDING] Horário programado: ${horarioProgramado.toISOString()}`,
+        );
+        console.log(
+            `🔵 [REGISTER_PENDING] Diferença: ${Math.round(diffMinutos)} minutos`,
+        );
+        console.log(
+            `🔵 [REGISTER_PENDING] Tolerância: ${toleranciaMinutos} minutos`,
+        );
+
+        if (diffMinutos > toleranciaMinutos) {
+            console.log(
+                `🔴 [REGISTER_PENDING] DOSE JÁ PERDIDA! Não pode marcar como tomada.`,
+            );
+            return res.status(400).json({
+                error: 'Esta dose já está perdida. A próxima dose será no horário calculado.',
+            });
+        }
+
+        let pendingUntil;
+        let mensagem;
+
+        if (diffMinutos < 0) {
+            pendingUntil = new Date(
+                horarioProgramado.getTime() + 3 * 60 * 1000,
+            );
+            mensagem = `Dose adiantada. Aguardando confirmação às ${pendingUntil.getHours().toString().padStart(2, '0')}:${pendingUntil.getMinutes().toString().padStart(2, '0')}.`;
+            console.log(`🔵 [REGISTER_PENDING] Clique ANTES do horário`);
+        } else {
+            // Caso 2: Clique DEPOIS do horário programado (mas dentro da tolerância)
+            // pendingUntil = agora + 3 minutos
+            pendingUntil = new Date(agora.getTime() + 3 * 60 * 1000);
+            mensagem = 'Dose registrada. Aguardando confirmação de 3 minutos.';
+            console.log(
+                `🔵 [REGISTER_PENDING] Clique DEPOIS do horário (dentro da tolerância)`,
+            );
+        }
+
+        console.log(`🔵 [REGISTER_PENDING] Hora atual: ${horaAtual}`);
+        console.log(`🔵 [REGISTER_PENDING] Hora correta: ${horaCorreta}`);
+        console.log(
+            `🔵 [REGISTER_PENDING] pendingUntil: ${pendingUntil.toISOString()}`,
+        );
+
         await medication.update({
-            status: true, // Aguardando confirmação
+            status: true,
             pendingconfirmation: true,
             pendinguntil: pendingUntil,
-            // ⚠️ NÃO muda hournextdose ainda!
         });
 
-        const mensagem =
-            horaAtual < horaCorreta
-                ? 'Dose adiantada. Aguardando confirmação de 3 minutos.'
-                : 'Dose registrada. Aguardando confirmação de 3 minutos.';
+        console.log(`🟢 [REGISTER_PENDING] Medicamento ATUALIZADO:`);
+        console.log(`   - status: true`);
+        console.log(`   - pendingconfirmation: true`);
+        console.log(`   - pendinguntil: ${pendingUntil}`);
+        console.log(
+            `   - hournextdose: ${medication.hournextdose} (NÃO ALTERADO)`,
+        );
+
+        console.log(`🔵 [REGISTER_PENDING] Mensagem: ${mensagem}`);
+        console.log(`🔵 [REGISTER_PENDING] ========== FIM ==========\n`);
 
         res.json({
             message: mensagem,
@@ -360,45 +475,66 @@ export async function registerPendingConfirmation(req, res) {
                 status: true,
                 pendingconfirmation: true,
                 pendinguntil: pendingUntil,
-                hournextdose: horaCorreta, // Continua mostrando o horário correto
+                hournextdose: horaCorreta,
                 doseinterval: medication.doseinterval,
             },
         });
     } catch (error) {
-        console.error('Erro ao registrar confirmação pendente:', error);
+        console.error(`🔴 [REGISTER_PENDING] ERRO:`, error);
         res.status(500).json({ error: 'Erro ao registrar confirmação' });
     }
 }
 
-/**
- * 🔴 Cancelar confirmação pendente
- * - Usuário desistiu de tomar
- * - Não registra no histórico
- * - Não muda o horário
- */
 export async function cancelPendingDose(req, res) {
     const { medicationid } = req.params;
-    const userId = req.user.userId; // 🔴 ADICIONAR ISSO!
+    const userId = req.user.userId;
 
     try {
+        console.log(`\n🟠 [CANCEL_PENDING] ========== INÍCIO ==========`);
+        console.log(`🟠 [CANCEL_PENDING] Medicamento ID: ${medicationid}`);
+        console.log(`🟠 [CANCEL_PENDING] Usuário ID: ${userId}`);
+        console.log(
+            `🟠 [CANCEL_PENDING] Timestamp: ${timezone.now().toISOString()}`,
+        );
+
         const medication = await models.Medication.findOne({
             where: {
                 id: medicationid,
-                userid: userId, // 🔴 FILTRAR PELO USUÁRIO!
+                userid: userId,
             },
         });
 
         if (!medication) {
+            console.log(`🟠 [CANCEL_PENDING] Medicamento NÃO encontrado!`);
             return res
                 .status(404)
                 .json({ error: 'Medicamento não encontrado' });
         }
+
+        console.log(
+            `🟠 [CANCEL_PENDING] Medicamento encontrado: ${medication.name}`,
+        );
+        console.log(`🟠 [CANCEL_PENDING] Estado ANTES do cancelamento:`);
+        console.log(`   - status: ${medication.status}`);
+        console.log(
+            `   - pendingconfirmation: ${medication.pendingconfirmation}`,
+        );
+        console.log(`   - pendinguntil: ${medication.pendinguntil}`);
 
         await medication.update({
             status: false,
             pendingconfirmation: false,
             pendinguntil: null,
         });
+
+        console.log(`🟢 [CANCEL_PENDING] Medicamento APÓS cancelamento:`);
+        console.log(`   - status: false`);
+        console.log(`   - pendingconfirmation: false`);
+        console.log(`   - pendinguntil: null`);
+        console.log(
+            `   - hournextdose: ${medication.hournextdose} (NÃO ALTERADO)`,
+        );
+        console.log(`🟠 [CANCEL_PENDING] ========== FIM ==========\n`);
 
         res.json({
             message: 'Confirmação cancelada',
@@ -410,7 +546,7 @@ export async function cancelPendingDose(req, res) {
             },
         });
     } catch (error) {
-        console.error('Erro ao cancelar confirmação:', error);
+        console.error(`🟠 [CANCEL_PENDING] ERRO:`, error);
         res.status(500).json({ error: 'Erro ao cancelar confirmação' });
     }
 }
@@ -422,6 +558,39 @@ export async function updateMedication(req, res) {
     const userId = req.user.userId;
 
     try {
+        const errors = [];
+
+        if (name) {
+            const nameValidation = validationMedication.name(name);
+            errors.push(...nameValidation.errors);
+        }
+
+        if (hournextdose) {
+            const timeValidation = validationMedication.time(hournextdose);
+            errors.push(...timeValidation.errors);
+        }
+
+        if (intervalinhours) {
+            const intervalValidation =
+                validationMedication.interval(intervalinhours);
+            errors.push(...intervalValidation.errors);
+        }
+
+        if (periodstart || periodend) {
+            const periodValidation = validationMedication.period(
+                periodstart,
+                periodend,
+            );
+            errors.push(...periodValidation.errors);
+        }
+
+        if (errors.length > 0) {
+            return res.status(400).json({
+                error: 'Dados inválidos',
+                details: errors,
+            });
+        }
+
         const medication = await models.Medication.findOne({
             where: { id: medicationid, userid: userId },
             include: [
@@ -440,10 +609,16 @@ export async function updateMedication(req, res) {
         }
 
         const updates = {};
-        if (name) updates.name = name.toLowerCase();
+        if (name) updates.name = name.toLowerCase().trim();
         if (hournextdose) updates.hournextdose = hournextdose;
-        if (periodstart) updates.periodstart = periodstart;
-        if (periodend) updates.periodend = periodend;
+
+        if (periodstart) {
+            updates.periodstart = timezone.startOfDay(periodstart);
+        }
+
+        if (periodend) {
+            updates.periodend = timezone.endOfDay(periodend);
+        }
 
         if (intervalinhours) {
             let doseInterval = await models.DoseIntervals.findOne({
@@ -458,14 +633,12 @@ export async function updateMedication(req, res) {
 
             updates.doseintervalid = doseInterval.id;
 
-            // Recalcula próximo horário baseado no novo intervalo
-            const agora = new Date();
-            const horaAtual = `${agora.getHours()}:${agora.getMinutes()}`;
-
-            updates.hournextdose = calculateNextDose(
-                horaAtual,
-                intervalinhours,
-            );
+            if (!hournextdose && medication.hournextdose) {
+                updates.hournextdose = calculateNextDose(
+                    medication.hournextdose,
+                    intervalinhours,
+                );
+            }
         }
 
         await medication.update(updates);
@@ -486,6 +659,14 @@ export async function updateMedication(req, res) {
         res.json(updatedMedication);
     } catch (error) {
         console.error('Erro ao atualizar medicamento:', error);
+
+        if (error.name === 'SequelizeValidationError') {
+            return res.status(400).json({
+                error: 'Erro de validação',
+                details: error.errors.map((e) => e.message),
+            });
+        }
+
         res.status(500).json({
             error: 'Erro ao atualizar medicamento.',
             details: error.message,
