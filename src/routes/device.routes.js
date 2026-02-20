@@ -1,10 +1,10 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 import {
     getDeviceAccounts,
     registerPushSubscription,
     removeDevice,
-} from '../controllers/deviceController.js';
+} from '../controllers/device.controller.js';
 
 const router = express.Router();
 router.use(authenticateToken);

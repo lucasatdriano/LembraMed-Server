@@ -1,14 +1,14 @@
 import sequelize from '../config/db.js';
 import initUser from './entities/user.js';
 import initDevice from './entities/device.js';
-import initAccountDevice from './entities/accountDevice.js';
-import initRefreshToken from './entities/refreshToken.js';
-import initPushSubscription from './entities/pushSubscription.js';
+import initAccountDevice from './entities/account-device.js';
+import initRefreshToken from './entities/refresh-token.js';
+import initPushSubscription from './entities/push-subscription.js';
 import initNotification from './entities/notification.js';
 import initContact from './entities/contact.js';
 import initMedication from './entities/medication.js';
-import initDoseIntervals from './entities/doseIntervals.js';
-import initMedicationHistory from './entities/medicationHistory.js';
+import initDoseIntervals from './entities/dose-intervals.js';
+import initMedicationHistory from './entities/medication-history.js';
 
 const models = {
     User: initUser(sequelize),

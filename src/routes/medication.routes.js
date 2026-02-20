@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 import {
     findMedications,
     getMedicationById,
@@ -9,7 +9,7 @@ import {
     cancelPendingDose,
     updateMedication,
     deleteMedication,
-} from '../controllers/medicationController.js';
+} from '../controllers/medication.controller.js';
 
 const router = express.Router();
 router.use(authenticateToken);

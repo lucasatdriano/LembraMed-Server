@@ -9,10 +9,10 @@ export const validationUser = {
 
         if (!name || name.trim().length === 0) {
             errors.push('Nome é obrigatório');
-        } else if (name.trim().length < 3) {
-            errors.push('Nome deve ter pelo menos 3 caracteres');
-        } else if (name.trim().length > 50) {
-            errors.push('Nome deve ter no máximo 50 caracteres');
+        } else if (name.trim().length < 2) {
+            errors.push('Nome deve ter pelo menos 2 caracteres');
+        } else if (name.trim().length > 30) {
+            errors.push('Nome deve ter no máximo 30 caracteres');
         }
 
         return {

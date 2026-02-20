@@ -1,12 +1,12 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 import {
     createContact,
     deleteContact,
     findContacts,
     getContactById,
     updateContact,
-} from '../controllers/contactController.js';
+} from '../controllers/contact.controller.js';
 
 const router = express.Router();
 router.use(authenticateToken);

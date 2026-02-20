@@ -10,12 +10,14 @@ function generateBaseUsername(name) {
 }
 
 export async function generateUniqueUsername(name) {
-    let baseUsername = generateBaseUsername(name);
-    let count = 1;
+    const baseUsername = generateBaseUsername(name);
 
-    while (await models.User.findOne({ where: { username: baseUsername } })) {
-        baseUsername = `${baseUsername}${count}`;
-        count++;
+    const existingUser = await models.User.findOne({
+        where: { username: baseUsername },
+    });
+
+    if (existingUser) {
+        return null;
     }
 
     return baseUsername;

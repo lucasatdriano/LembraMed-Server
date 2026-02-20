@@ -8,25 +8,16 @@ webpush.setVapidDetails(
     process.env.VAPID_PRIVATE_KEY,
 );
 
-export async function sendNotification(req, res) {
-    try {
-        const { title, message, tag } = req.body;
-        const userId = req.user.userId;
-
-        if (!title) {
-            return res.status(400).json({
-                error: 'Title é obrigatório',
-            });
-        }
-
+export class NotificationService {
+    static async sendNotification(userId, title, message, tag) {
         const subscriptions = await models.PushSubscription.findAll({
             where: { userid: userId },
         });
 
         if (subscriptions.length === 0) {
-            return res.status(404).json({
-                error: 'Nenhuma subscription encontrada para este usuário',
-            });
+            throw new Error(
+                'Nenhuma subscription encontrada para este usuário',
+            );
         }
 
         const payload = JSON.stringify({
@@ -81,7 +72,7 @@ export async function sendNotification(req, res) {
         const successful = results.filter((r) => r.success).length;
         const failed = results.filter((r) => !r.success).length;
 
-        res.json({
+        return {
             success: true,
             message: `Notificação enviada para ${successful} dispositivos`,
             details: {
@@ -89,18 +80,10 @@ export async function sendNotification(req, res) {
                 successful,
                 failed,
             },
-        });
-    } catch (error) {
-        console.error('Erro ao enviar notificação:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        };
     }
-}
 
-export async function getNotifications(req, res) {
-    try {
-        const { limit = 50, offset = 0 } = req.query;
-        const userId = req.user.userId;
-
+    static async getNotifications(userId, limit, offset) {
         const notifications = await models.Notification.findAll({
             where: { userid: userId },
             attributes: ['id', 'title', 'message', 'sentat', 'readat'],
@@ -109,18 +92,10 @@ export async function getNotifications(req, res) {
             offset: parseInt(offset),
         });
 
-        res.json({ success: true, notifications });
-    } catch (error) {
-        console.error('Erro ao buscar notificações:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        return notifications;
     }
-}
 
-export async function markAsRead(req, res) {
-    try {
-        const { notificationId } = req.params;
-        const userId = req.user.userId;
-
+    static async markAsRead(userId, notificationId) {
         const notification = await models.Notification.findOne({
             where: {
                 id: notificationId,
@@ -129,19 +104,11 @@ export async function markAsRead(req, res) {
         });
 
         if (!notification) {
-            return res
-                .status(404)
-                .json({ error: 'Notificação não encontrada' });
+            return null;
         }
 
         await notification.update({ readat: timezone.now() });
 
-        res.json({
-            success: true,
-            message: 'Notificação marcada como lida',
-        });
-    } catch (error) {
-        console.error('Erro ao marcar notificação como lida:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+        return notification;
     }
 }

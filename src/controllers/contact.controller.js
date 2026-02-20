@@ -1,34 +1,14 @@
-import { Op } from 'sequelize';
-import { models } from '../models/index.js';
-import { validationContact } from '../utils/validations/contactValidation.js';
+import { ContactService } from '../services/contact.service.js';
+import { validationContact } from '../utils/validations/contact.validation.js';
 
 export async function getContacts(req, res) {
     const { page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
     try {
-        const pageNumber = parseInt(page);
-        const limitNumber = parseInt(limit);
-        const offset = (pageNumber - 1) * limitNumber;
+        const result = await ContactService.getContacts(userId, page, limit);
 
-        const { count, rows: contacts } = await models.Contact.findAndCountAll({
-            where: { userid: userId },
-            attributes: ['id', 'name', 'numberphone'],
-            limit: parseInt(limit),
-            offset: offset,
-            order: [['name', 'ASC']],
-        });
-
-        res.json({
-            contacts,
-            pagination: {
-                currentPage: parseInt(page),
-                totalPages: Math.ceil(count / limit),
-                totalRecords: count,
-                hasNext: offset + contacts.length < count,
-                hasPrev: page > 1,
-            },
-        });
+        res.json(result);
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao buscar contatos.',
@@ -42,13 +22,7 @@ export async function getContactById(req, res) {
     const userId = req.user.userId;
 
     try {
-        const contact = await models.Contact.findOne({
-            where: {
-                id: contactid,
-                userid: userId,
-            },
-            attributes: ['id', 'name', 'numberphone'],
-        });
+        const contact = await ContactService.getContactById(userId, contactid);
 
         if (!contact) {
             return res.status(404).json({ error: 'Contato não encontrado' });
@@ -68,48 +42,14 @@ export async function findContacts(req, res) {
     const userId = req.user.userId;
 
     try {
-        const whereClause = { userid: userId };
-        const pageNumber = parseInt(page);
-        const limitNumber = parseInt(limit);
-        const offset = (pageNumber - 1) * limitNumber;
+        const result = await ContactService.findContacts(
+            userId,
+            search,
+            page,
+            limit,
+        );
 
-        if (search) {
-            const searchLower = search.toLowerCase();
-            const isNumber = /^\d+$/.test(search);
-
-            whereClause[Op.or] = [
-                {
-                    name: {
-                        [Op.like]: `%${searchLower}%`,
-                    },
-                },
-            ];
-
-            if (isNumber) {
-                whereClause[Op.or].push({
-                    numberphone: { [Op.like]: `%${searchLower}%` },
-                });
-            }
-        }
-
-        const { count, rows: contacts } = await models.Contact.findAndCountAll({
-            where: whereClause,
-            attributes: ['id', 'name', 'numberphone'],
-            limit: parseInt(limit),
-            offset: offset,
-            order: [['name', 'ASC']],
-        });
-
-        res.json({
-            contacts,
-            pagination: {
-                currentPage: parseInt(page),
-                totalPages: Math.ceil(count / limit),
-                totalRecords: count,
-                hasNext: offset + contacts.length < count,
-                hasPrev: page > 1,
-            },
-        });
+        res.json(result);
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao buscar contato.',
@@ -136,11 +76,11 @@ export async function createContact(req, res) {
             });
         }
 
-        const newContact = await models.Contact.create({
-            name: name.toLowerCase().trim(),
-            numberphone: numberphone.trim(),
-            userid: userId,
-        });
+        const newContact = await ContactService.createContact(
+            userId,
+            name,
+            numberphone,
+        );
 
         res.status(201).json(newContact);
     } catch (error) {
@@ -192,23 +132,18 @@ export async function updateContact(req, res) {
             });
         }
 
-        const contact = await models.Contact.findOne({
-            where: {
-                id: contactid,
-                userid: userId,
-            },
-        });
+        const updatedContact = await ContactService.updateContact(
+            userId,
+            contactid,
+            name,
+            numberphone,
+        );
 
-        if (!contact) {
+        if (!updatedContact) {
             return res.status(404).json({ error: 'Contato não encontrado.' });
         }
 
-        if (name) contact.name = name.toLowerCase().trim();
-        if (numberphone) contact.numberphone = numberphone.trim();
-
-        await contact.save();
-
-        res.status(200).json(contact);
+        res.status(200).json(updatedContact);
     } catch (error) {
         console.error('❌ Erro ao atualizar contato:', error);
 
@@ -240,24 +175,16 @@ export async function deleteContact(req, res) {
     const userId = req.user.userId;
 
     try {
-        const contact = await models.Contact.findOne({
-            where: {
-                id: contactid,
-                userid: userId,
-            },
-        });
+        const result = await ContactService.deleteContact(userId, contactid);
 
-        if (!contact) {
+        if (!result) {
             return res.status(404).json({
                 error: 'Contato não encontrado.',
             });
         }
 
-        const nameContact = contact.name;
-        await contact.destroy();
-
         res.status(200).json({
-            message: `Contato de ${nameContact} deletado com sucesso.`,
+            message: `Contato de ${result.contactName} deletado com sucesso.`,
         });
     } catch (error) {
         res.status(500).json({
