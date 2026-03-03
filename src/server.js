@@ -49,7 +49,7 @@ app.use(
     }),
 );
 
-app.use((req, next) => {
+app.use((req, res, next) => {
     console.log(`📨 [DEBUG REQUEST] ${req.method} ${req.url}`, {
         body: req.body,
         headers: req.headers,
