@@ -3,9 +3,8 @@ import { models } from '../models/index.js';
 import { Op } from 'sequelize';
 import { calcularTolerancia } from '../utils/helpers/dose-rules.helper.js';
 import { timezone } from '../utils/formatters/timezone.js';
-import { proximaOcorrenciaHorario } from '../utils/helpers/dateTime.helper.js';
+import { proximaOcorrenciaHorario } from '../utils/helpers/datetime.helper.js';
 import medicationNotificationSchedulerService from './medication-notification-scheduler.service.js';
-import { NotificationService } from './notification.service.js';
 
 class MedicationScheduler {
     constructor() {

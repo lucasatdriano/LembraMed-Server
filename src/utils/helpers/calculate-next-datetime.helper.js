@@ -1,4 +1,4 @@
-import { calcularProximoHorarioCompleto } from './dateTime.helper.js';
+import { calcularProximoHorarioCompleto } from './datetime.helper.js';
 
 export function calculateNextDateTime(medication) {
     try {
