@@ -25,11 +25,9 @@ app.use(
         origin: function (origin, callback) {
             console.log(`🔍 [DEBUG CORS] Origin recebida: ${origin}`);
             const allowedOrigins = [
-                'http://localhost:3000',
                 'http://localhost:3001',
                 'http://127.0.0.1:3001',
-                'http://127.0.0.1:3000',
-                'https://seu-frontend-production.com',
+                'https://lembramed.vercel.app/',
             ];
 
             if (!origin) {
@@ -51,7 +49,7 @@ app.use(
     }),
 );
 
-app.use((req, res, next) => {
+app.use((req, next) => {
     console.log(`📨 [DEBUG REQUEST] ${req.method} ${req.url}`, {
         body: req.body,
         headers: req.headers,
