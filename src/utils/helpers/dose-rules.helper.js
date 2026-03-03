@@ -9,13 +9,12 @@ export function calcularTolerancia(intervaloHoras) {
 }
 
 /**
- * Verifica se faltam 4 horas ou mais para a próxima dose
+ * Verifica se faltam 2 horas ou mais para a próxima dose
  * @param {Object} medication - Medicamento
  * @param {Date} agora - Data atual
  * @returns {Object} Resultado da validação
  */
 export function verificarIntervaloMinimo(medication, agora) {
-    // Se não tem última dose, pode tomar
     if (!medication.lasttakentime) {
         return { valido: true };
     }
@@ -24,14 +23,12 @@ export function verificarIntervaloMinimo(medication, agora) {
         `\n⏰ [VERIFICAR_INTERVALO] ========== VERIFICANDO INTERVALO MÍNIMO ==========`,
     );
 
-    // Converte a última dose tomada para Date completo
     const [ultimaHora, ultimoMinuto] = medication.lasttakentime
         .split(':')
         .map(Number);
     const dataUltimaDose = new Date(agora);
     dataUltimaDose.setHours(ultimaHora, ultimoMinuto, 0, 0);
 
-    // Se a última dose parece ser no futuro (ex: 21h em relação às 11h), é do dia anterior
     if (dataUltimaDose > agora) {
         dataUltimaDose.setDate(dataUltimaDose.getDate() - 1);
         console.log(
@@ -39,7 +36,6 @@ export function verificarIntervaloMinimo(medication, agora) {
         );
     }
 
-    // Calcula o próximo horário permitido (última dose + 4 horas)
     const proximoHorarioPermitido = new Date(
         dataUltimaDose.getTime() + 2 * 60 * 60 * 1000,
     );
@@ -58,9 +54,7 @@ export function verificarIntervaloMinimo(medication, agora) {
         `⏰ [VERIFICAR_INTERVALO] Minutos até poder tomar: ${Math.round(diffMinutosAtePermitido)}`,
     );
 
-    // Se faltam 4 horas ou mais para a próxima dose (diffMinutosAtePermitido > 0)
-    if (diffMinutosAtePermitido > 4 * 60) {
-        // Mais de 4 horas
+    if (diffMinutosAtePermitido > 2 * 60) {
         const horasRestantes = Math.floor(diffMinutosAtePermitido / 60);
         const minutosRestantes = Math.floor(diffMinutosAtePermitido % 60);
 
@@ -68,10 +62,10 @@ export function verificarIntervaloMinimo(medication, agora) {
         if (minutosRestantes > 0) {
             mensagem += ` e ${minutosRestantes} minuto${minutosRestantes > 1 ? 's' : ''}`;
         }
-        mensagem += ` para a próxima dose. O intervalo mínimo é de 4 horas.`;
+        mensagem += ` para a próxima dose. O intervalo mínimo é de 2 horas.`;
 
         console.log(
-            `⏰ [VERIFICAR_INTERVALO] ❌ FALTAM 4 HORAS OU MAIS - NÃO PODE TOMAR`,
+            `⏰ [VERIFICAR_INTERVALO] ❌ FALTAM 2 HORAS OU MAIS - NÃO PODE TOMAR`,
         );
         console.log(`⏰ [VERIFICAR_INTERVALO] Mensagem: ${mensagem}`);
 

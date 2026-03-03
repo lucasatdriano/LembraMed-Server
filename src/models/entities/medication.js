@@ -72,6 +72,11 @@ export default (sequelize) => {
                 defaultValue: sequelize.fn('NOW'),
                 field: 'createdat',
             },
+            updatedat: {
+                type: DataTypes.DATE,
+                defaultValue: DataTypes.NOW,
+                field: 'updatedat',
+            },
         },
         {
             timestamps: false,

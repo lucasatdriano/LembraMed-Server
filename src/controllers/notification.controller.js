@@ -7,7 +7,7 @@ export async function sendNotification(req, res) {
 
         if (!title) {
             return res.status(400).json({
-                error: 'Title é obrigatório',
+                error: 'Título é obrigatório',
             });
         }
 

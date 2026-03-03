@@ -322,34 +322,30 @@ export class MedicationService {
         const intervaloHoras = medication.doseinterval.intervalinhours;
         const toleranciaMinutos = calcularTolerancia(intervaloHoras);
 
-        const [horas, minutos] = horaCorreta.split(':').map(Number);
-
-        const doseHoje = timezone.now(agora);
-        doseHoje.setHours(horas, minutos, 0, 0);
+        const doseAtual = this.determinarDoseAtual(medication, agora);
 
         console.log(`\n🔵 [REGISTER_PENDING] ===== ANÁLISE DA DOSE =====`);
         console.log(
-            `🔵 [REGISTER_PENDING] Dose de hoje: ${doseHoje.toISOString()}`,
+            `🔵 [REGISTER_PENDING] Dose atual considerada: ${doseAtual.toISOString()}`,
         );
         console.log(`🔵 [REGISTER_PENDING] Agora: ${agora.toISOString()}`);
 
-        const inicioJanela = new Date(doseHoje);
-        inicioJanela.setHours(doseHoje.getHours() - 2, 0, 0, 0);
+        const inicioJanela = new Date(doseAtual);
+        inicioJanela.setHours(doseAtual.getHours() - 2, 0, 0, 0);
 
-        const fimJanela = new Date(doseHoje);
-        fimJanela.setMinutes(doseHoje.getMinutes() + toleranciaMinutos);
+        const fimJanela = new Date(doseAtual);
+        fimJanela.setMinutes(doseAtual.getMinutes() + toleranciaMinutos);
 
+        console.log(`\n🔵 [REGISTER_PENDING] ===== JANELA DA DOSE ATUAL =====`);
         console.log(
-            `\n🔵 [REGISTER_PENDING] ===== JANELA DA DOSE DE HOJE =====`,
-        );
-        console.log(
-            `🔵 [REGISTER_PENDING] Início da janela (4h antes): ${inicioJanela.toISOString()}`,
+            `🔵 [REGISTER_PENDING] Início da janela (2h antes): ${inicioJanela.toISOString()}`,
         );
         console.log(
             `🔵 [REGISTER_PENDING] Fim da janela (${toleranciaMinutos}min depois): ${fimJanela.toISOString()}`,
         );
         console.log(`🔵 [REGISTER_PENDING] Agora: ${agora.toISOString()}`);
 
+        // Verificar se está dentro da janela da dose atual
         if (agora < inicioJanela) {
             console.log(`🔵 [REGISTER_PENDING] ❌ Antes da janela abrir`);
 
@@ -367,7 +363,7 @@ export class MedicationService {
             );
             error.details = {
                 message: `A janela para esta dose abre às ${horaInicio}:${minInicio}.`,
-                doseHoje: doseHoje.toISOString(),
+                doseAtual: doseAtual.toISOString(),
                 inicioJanela: inicioJanela.toISOString(),
                 fimJanela: fimJanela.toISOString(),
                 agora: agora.toISOString(),
@@ -378,30 +374,30 @@ export class MedicationService {
         }
 
         if (agora > fimJanela) {
-            console.log(`🔵 [REGISTER_PENDING] ❌ Depois da janela fechar`);
+            console.log(`🔵 [REGISTER_PENDING] Depois da janela fechar`);
 
-            const horaInicio = inicioJanela
+            // 🔥 Verificar se já passou para a próxima dose
+            const proximaDose = this.calcularProximaDose(medication, doseAtual);
+
+            const horaInicio = proximaDose
                 .getHours()
                 .toString()
                 .padStart(2, '0');
-            const minInicio = inicioJanela
+            const minInicio = proximaDose
                 .getMinutes()
                 .toString()
                 .padStart(2, '0');
-            const toleranciaHoras = (toleranciaMinutos / 60).toFixed(1);
 
-            const error = new Error(
-                'Aguarde o intervalo mínimo de 2 horas, antes de tomar a próxima dose.',
-            );
+            const error = new Error('Esta dose já passou do horário.');
             error.details = {
-                message: `A janela para esta dose fechou. Próxima janela abre amanhã às ${horaInicio}:${minInicio}.`,
-                doseHoje: doseHoje.toISOString(),
+                message: `A próxima janela abre às ${horaInicio}:${minInicio}.`,
+                doseAtual: doseAtual.toISOString(),
+                proximaDose: proximaDose.toISOString(),
                 inicioJanela: inicioJanela.toISOString(),
                 fimJanela: fimJanela.toISOString(),
                 agora: agora.toISOString(),
                 intervaloHoras,
                 toleranciaMinutos,
-                toleranciaHoras: `${toleranciaHoras} horas`,
             };
             throw error;
         }
@@ -409,10 +405,10 @@ export class MedicationService {
         console.log(`🔵 [REGISTER_PENDING] ✅ DENTRO DA JANELA DE MARCAÇÃO!`);
 
         const diffMinutos =
-            (agora.getTime() - doseHoje.getTime()) / (60 * 1000);
+            (agora.getTime() - doseAtual.getTime()) / (60 * 1000);
 
         console.log(
-            `\n🔵 [REGISTER_PENDING] Horário alvo: ${doseHoje.toISOString()}`,
+            `\n🔵 [REGISTER_PENDING] Horário alvo: ${doseAtual.toISOString()}`, // 🔥 CORRIGIDO: doseAtual
         );
         console.log(
             `🔵 [REGISTER_PENDING] Diferença: ${Math.round(diffMinutos)} minutos`,
@@ -427,7 +423,7 @@ export class MedicationService {
                 'Esta dose já está perdida. A próxima dose será no horário calculado.',
             );
             error.details = {
-                doseHoje: doseHoje.toISOString(),
+                doseAtual: doseAtual.toISOString(), // 🔥 CORRIGIDO: doseAtual
                 atrasoMinutos: Math.round(diffMinutos),
                 toleranciaMinutos,
             };
@@ -456,7 +452,7 @@ export class MedicationService {
         let mensagem;
 
         if (diffMinutos < 0) {
-            pendingUntil = doseHoje.getTime() + 3 * 60 * 1000;
+            pendingUntil = doseAtual.getTime() + 3 * 60 * 1000; // 🔥 CORRIGIDO: doseAtual
             const horaPending = new Date(pendingUntil)
                 .toTimeString()
                 .slice(0, 5);
@@ -480,6 +476,16 @@ export class MedicationService {
             pendingconfirmation: true,
             pendinguntil: pendingUntil,
         });
+
+        console.log(`\n🟢 [REGISTER_PENDING] APÓS UPDATE NO BANCO:`);
+        console.log(`   - status: true`);
+        console.log(`   - pendingconfirmation: true`);
+        console.log(
+            `   - pendinguntil: ${new Date(pendingUntil).toISOString()}`,
+        );
+        console.log(
+            `   - hora atual do servidor: ${timezone.now().toISOString()}`,
+        );
 
         const medicationAtualizada = await models.Medication.findByPk(
             medicationId,
@@ -518,7 +524,7 @@ export class MedicationService {
                 lasttakentime: medicationAtualizada.lasttakentime,
                 doseinterval: medicationAtualizada.doseinterval,
                 metadata: {
-                    doseDoDia: doseHoje.toISOString(),
+                    doseDoDia: doseAtual.toISOString(),
                     tipoMarcacao: tipoDose,
                     horaProgramada: horaCorreta,
                     intervaloHoras,
@@ -774,5 +780,45 @@ export class MedicationService {
         await medication.destroy();
 
         return { medicationName };
+    }
+
+    static determinarDoseAtual(medication, agora) {
+        const [horas, minutos] = medication.hournextdose.split(':').map(Number);
+
+        // Cria uma data para hoje com o horário da dose
+        const doseHoje = new Date(agora);
+        doseHoje.setHours(horas, minutos, 0, 0);
+
+        // Cria uma data para ontem com o horário da dose
+        const doseOntem = new Date(agora);
+        doseOntem.setDate(doseOntem.getDate() - 1);
+        doseOntem.setHours(horas, minutos, 0, 0);
+
+        // Calcula a janela da dose de ontem
+        const inicioJanelaOntem = new Date(doseOntem);
+        inicioJanelaOntem.setHours(doseOntem.getHours() - 2, 0, 0, 0);
+
+        const fimJanelaOntem = new Date(doseOntem);
+        fimJanelaOntem.setMinutes(
+            doseOntem.getMinutes() +
+                calcularTolerancia(medication.doseinterval.intervalinhours),
+        );
+
+        if (agora >= inicioJanelaOntem && agora <= fimJanelaOntem) {
+            console.log(
+                `🔵 [DETERMINAR_DOSE] Usando dose do dia anterior (dentro da janela)`,
+            );
+            return doseOntem;
+        }
+
+        console.log(`🔵 [DETERMINAR_DOSE] Usando dose de hoje`);
+        return doseHoje;
+    }
+
+    static calcularProximaDose(medication, doseAtual) {
+        const intervaloHoras = medication.doseinterval.intervalinhours;
+        const proximaDose = new Date(doseAtual);
+        proximaDose.setHours(proximaDose.getHours() + intervaloHoras);
+        return proximaDose;
     }
 }

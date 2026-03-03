@@ -135,7 +135,7 @@ export async function createMedication(req, res) {
 
         res.status(201).json(newMedication);
     } catch (error) {
-        console.error('❌ Erro ao criar medicamento:', error);
+        console.error('Erro ao criar medicamento:', error);
 
         if (error.name === 'SequelizeValidationError') {
             return res.status(400).json({
@@ -163,7 +163,7 @@ export async function registerPendingConfirmation(req, res) {
 
         res.json(result);
     } catch (error) {
-        console.error(`🔴 [REGISTER_PENDING] ERRO:`, error);
+        console.error(`[REGISTER_PENDING] ERRO:`, error);
 
         if (error.message === 'Medicamento não encontrado') {
             return res.status(404).json({ error: error.message });
@@ -196,7 +196,7 @@ export async function cancelPendingDose(req, res) {
 
         res.json(result);
     } catch (error) {
-        console.error(`🟠 [CANCEL_PENDING] ERRO:`, error);
+        console.error(`[CANCEL_PENDING] ERRO:`, error);
 
         if (error.message === 'Medicamento não encontrado') {
             return res.status(404).json({ error: error.message });
@@ -260,7 +260,7 @@ export async function updateMedication(req, res) {
 
         res.json(updatedMedication);
     } catch (error) {
-        console.error('❌ Erro ao atualizar medicamento:', error);
+        console.error('Erro ao atualizar medicamento:', error);
 
         if (error.name === 'SequelizeValidationError') {
             return res.status(400).json({

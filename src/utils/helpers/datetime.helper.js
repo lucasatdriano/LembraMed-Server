@@ -8,10 +8,6 @@ export function proximaOcorrenciaHorario(horarioStr, dataReferencia = null) {
     return timezone.proximaOcorrenciaHorario(horarioStr, dataReferencia);
 }
 
-export function horarioJaPassou(horarioStr, dataReferencia = null) {
-    return timezone.horarioJaPassou(horarioStr, dataReferencia);
-}
-
 export function calcularProximoHorarioCompleto(
     medicamento,
     dataReferencia = null,
@@ -35,12 +31,4 @@ export function calcularProximoHorarioCompleto(
     }
 
     return timezone.proximaOcorrenciaHorario(medicamento.hournextdose, agora);
-}
-
-export function dentroDaTolerancia(dataAtual, dataProgramada, intervaloHoras) {
-    return timezone.dentroDaTolerancia(
-        dataAtual,
-        dataProgramada,
-        intervaloHoras,
-    );
 }

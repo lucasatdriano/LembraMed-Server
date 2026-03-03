@@ -4,14 +4,8 @@ import {
     addDays,
     isAfter,
     isBefore,
-    setHours,
-    setMinutes,
-    setSeconds,
-    setMilliseconds,
     startOfDay as fnsStartOfDay,
     endOfDay as fnsEndOfDay,
-    differenceInMinutes,
-    isSameDay,
 } from 'date-fns';
 
 const TIMEZONE = 'America/Sao_Paulo';
@@ -99,7 +93,7 @@ export const timezone = {
      */
     formatUTCTime(date) {
         const d = date instanceof Date ? date : new Date(date);
-        return d.toISOString().substring(11, 16); // Pega HH:mm do ISO string
+        return d.toISOString().substring(11, 16);
     },
 
     /**
@@ -112,11 +106,10 @@ export const timezone = {
         const data = dataBase ? this.now(dataBase) : this.now();
         const [horas, minutos] = horaStr.split(':').map(Number);
 
-        // Cria uma nova data baseada na data de referência (que já está no fuso)
         const dataAjustada = new Date(data);
         dataAjustada.setHours(horas, minutos, 0, 0);
 
-        return dataAjustada; // Já está no fuso correto
+        return dataAjustada;
     },
 
     /**
@@ -140,22 +133,6 @@ export const timezone = {
     },
 
     /**
-     * Verifica se um horário já passou considerando a data
-     * @param {string} horarioStr - Horário no formato HH:MM
-     * @param {Date} [dataReferencia] - Data de referência
-     * @returns {boolean} True se já passou
-     */
-    horarioJaPassou(horarioStr, dataReferencia = null) {
-        const agora = dataReferencia ? new Date(dataReferencia) : this.now();
-        const horarioHoje = this.horaParaDate(horarioStr, agora);
-
-        return (
-            isAfter(agora, horarioHoje) &&
-            !this.isMesmoHorario(agora, horarioHoje)
-        );
-    },
-
-    /**
      * Verifica se duas datas têm o mesmo horário (ignora data)
      * @param {Date} data1 - Primeira data
      * @param {Date} data2 - Segunda data
@@ -163,22 +140,6 @@ export const timezone = {
      */
     isMesmoHorario(data1, data2) {
         return this.toTimeString(data1) === this.toTimeString(data2);
-    },
-
-    /**
-     * Verifica se uma data está dentro do período de tolerância
-     * @param {Date} dataAtual - Data atual
-     * @param {Date} dataProgramada - Data programada
-     * @param {number} intervaloHoras - Intervalo em horas
-     * @returns {boolean} True se está dentro da tolerância
-     */
-    dentroDaTolerancia(dataAtual, dataProgramada, intervaloHoras) {
-        const diffMinutos = Math.abs(
-            differenceInMinutes(dataAtual, dataProgramada),
-        );
-        const toleranciaMinutos = Math.floor(intervaloHoras * 60 * 0.25); // 25% do intervalo
-
-        return diffMinutos <= toleranciaMinutos;
     },
 
     /**
@@ -224,24 +185,6 @@ export const timezone = {
     },
 
     /**
-     * Verifica se uma dose é do dia anterior (para doses noturnas)
-     * @param {string} horarioStr - Horário da dose
-     * @param {Date} dataAtual - Data atual
-     * @returns {boolean} True se a dose é do dia anterior
-     */
-    isDoseDoDiaAnterior(horarioStr, dataAtual) {
-        const dataZonada = this.now(dataAtual);
-        const horarioAtual = this.toTimeString(dataZonada);
-        const [horaAtual] = horarioAtual.split(':').map(Number);
-        const [horaDose] = horarioStr.split(':').map(Number);
-
-        // Se são 00h-04h e a dose é 22h-23h, provavelmente é do dia anterior
-        return (
-            horaAtual >= 0 && horaAtual <= 4 && horaDose >= 20 && horaDose <= 23
-        );
-    },
-
-    /**
      * Ajusta uma data para o início do dia (00:00:00)
      * @param {Date} data - Data a ser ajustada
      * @returns {Date} Data no início do dia
@@ -259,16 +202,6 @@ export const timezone = {
     fimDoDia(data) {
         const dataZonada = this.now(data);
         return toZonedTime(fnsEndOfDay(dataZonada), TIMEZONE);
-    },
-
-    /**
-     * Verifica se duas datas são do mesmo dia
-     * @param {Date} data1 - Primeira data
-     * @param {Date} data2 - Segunda data
-     * @returns {boolean} True se são do mesmo dia
-     */
-    mesmoDia(data1, data2) {
-        return isSameDay(this.now(data1), this.now(data2));
     },
 
     /**

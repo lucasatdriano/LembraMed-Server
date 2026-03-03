@@ -8,7 +8,7 @@ export async function register(req, res) {
         const validationResult = validationUser.register({ name, password });
 
         if (!validationResult.isValid) {
-            console.log('❌ Erros de validação:', validationResult.errors);
+            console.log('Erros de validação:', validationResult.errors);
             return res.status(400).json({
                 error: 'Dados inválidos',
                 details: validationResult.errors,
@@ -19,7 +19,7 @@ export async function register(req, res) {
 
         res.status(201).json(userResponse);
     } catch (error) {
-        console.error('❌ Erro ao cadastrar usuário:', error);
+        console.error('Erro ao cadastrar usuário:', error);
 
         if (error.message === 'Nome de usuário indisponível') {
             return res.status(409).json({
@@ -70,7 +70,7 @@ export async function loginMultiAccount(req, res) {
 
         res.json(result);
     } catch (error) {
-        console.error('❌ Erro no login multi-conta:', error);
+        console.error('Erro no login multi-conta:', error);
 
         if (
             error.message === 'Usuário não encontrado' ||

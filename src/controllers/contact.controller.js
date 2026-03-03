@@ -84,7 +84,7 @@ export async function createContact(req, res) {
 
         res.status(201).json(newContact);
     } catch (error) {
-        console.error('❌ Erro ao criar contato:', error);
+        console.error('Erro ao criar contato:', error);
 
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({
@@ -145,7 +145,7 @@ export async function updateContact(req, res) {
 
         res.status(200).json(updatedContact);
     } catch (error) {
-        console.error('❌ Erro ao atualizar contato:', error);
+        console.error('Erro ao atualizar contato:', error);
 
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({

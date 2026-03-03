@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import { models } from '../models/index.js';
+import { NotificationService } from './notification.service.js';
 
 export class ContactService {
     static async getContacts(userId, page, limit) {
@@ -116,10 +117,7 @@ export class ContactService {
 
     static async deleteContact(userId, contactId) {
         const contact = await models.Contact.findOne({
-            where: {
-                id: contactId,
-                userid: userId,
-            },
+            where: { id: contactId, userid: userId },
         });
 
         if (!contact) {
@@ -127,8 +125,13 @@ export class ContactService {
         }
 
         const contactName = contact.name;
+        const contactNumber = contact.numberphone;
+
         await contact.destroy();
 
-        return { contactName };
+        return {
+            contactName,
+            contactNumber,
+        };
     }
 }
