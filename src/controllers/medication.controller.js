@@ -1,16 +1,23 @@
 import { MedicationService } from '../services/medication.service.js';
 import { validationMedication } from '../utils/validations/medication.validation.js';
 
-export async function getMedications(req, res) {
-    const { page = 1, limit = 20 } = req.query;
+export async function findMedications(req, res) {
+    const { search, page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
     try {
-        const result = await MedicationService.getMedications(
+        const result = await MedicationService.findMedications(
             userId,
+            search,
             page,
             limit,
         );
+
+        if (result.medications.length === 0) {
+            return res.status(404).json({
+                error: 'Nenhum medicamento encontrado',
+            });
+        }
 
         res.json(result);
     } catch (error) {
@@ -43,34 +50,6 @@ export async function getMedicationById(req, res) {
         console.error('Erro ao buscar medicamento:', error);
         res.status(500).json({
             error: 'Erro ao buscar medicamento.',
-            details: error.message,
-        });
-    }
-}
-
-export async function findMedications(req, res) {
-    const { search, page = 1, limit = 20 } = req.query;
-    const userId = req.user.userId;
-
-    try {
-        const result = await MedicationService.findMedications(
-            userId,
-            search,
-            page,
-            limit,
-        );
-
-        if (result.medications.length === 0) {
-            return res.status(404).json({
-                error: 'Nenhum medicamento encontrado',
-            });
-        }
-
-        res.json(result);
-    } catch (error) {
-        console.error('Erro ao buscar medicamentos:', error);
-        res.status(500).json({
-            error: 'Erro ao buscar medicamentos.',
             details: error.message,
         });
     }

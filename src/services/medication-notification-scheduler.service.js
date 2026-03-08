@@ -45,7 +45,6 @@ class MedicationNotificationScheduler {
                 .split(':')
                 .map(Number);
 
-            // Horário da dose para hoje
             const horarioDoseHoje = new Date(agora);
             horarioDoseHoje.setHours(horas, minutos, 0, 0);
 
@@ -53,7 +52,6 @@ class MedicationNotificationScheduler {
                 medication.doseinterval.intervalinhours,
             );
 
-            // Diferença em minutos
             const diffMinutos =
                 (agora.getTime() - horarioDoseHoje.getTime()) / (60 * 1000);
 
@@ -62,12 +60,10 @@ class MedicationNotificationScheduler {
             console.log(`   - diff: ${Math.round(diffMinutos)}min`);
             console.log(`   - tolerância: ${toleranciaMinutos}min`);
 
-            // CASO 1: HORA EXATA (±1 minuto)
             if (Math.abs(diffMinutos) < 1) {
                 const initialKey = `${medication.userid}-${medication.id}-${horarioDoseHoje.toISOString()}`;
 
                 if (!this.initialTracker.has(initialKey)) {
-                    console.log(`   🔵 Enviando INITIAL`);
                     await NotificationService.sendMedicationReminder(
                         medication.userid,
                         medication.id,
@@ -80,15 +76,14 @@ class MedicationNotificationScheduler {
                 return;
             }
 
-            // CASO 2: DENTRO DA TOLERÂNCIA (já passou, mas ainda pode tomar)
+            // CASO 2: DENTRO DA TOLERÂNCIA
             if (diffMinutos > 0 && diffMinutos <= toleranciaMinutos) {
                 const reminderKey = `${medication.userid}-${medication.id}`;
                 const lastReminder = this.reminderTracker.get(reminderKey);
 
-                // Envia a cada 5 minutos
                 const deveEnviar =
                     !lastReminder ||
-                    agora.getTime() - lastReminder >= 5 * 60 * 1000;
+                    agora.getTime() - lastReminder >= 5 * 60 * 1000; //5m
 
                 if (deveEnviar) {
                     console.log(`   🟡 Enviando REMINDER`);
@@ -104,7 +99,7 @@ class MedicationNotificationScheduler {
                 return;
             }
 
-            // CASO 3: PASSOU DA TOLERÂNCIA (dose perdida)
+            // CASO 3: PASSOU DA TOLERÂNCIA
             if (diffMinutos > toleranciaMinutos) {
                 const missedKey = `${medication.userid}-${medication.id}-${horarioDoseHoje.toISOString()}`;
 
@@ -159,10 +154,6 @@ class MedicationNotificationScheduler {
                 return;
             }
 
-            console.log(
-                `📊 Encontrados ${medicamentosExpirados.length} medicamentos expirados`,
-            );
-
             for (const med of medicamentosExpirados) {
                 console.log(`Deletando medicamento expirado: ${med.name}`);
 
@@ -182,7 +173,7 @@ class MedicationNotificationScheduler {
                 //     med.id,
                 //     med.name,
                 //     med.hournextdose || '00:00',
-                //     'expired' // Você precisaria adicionar este tipo no switch
+                //     'expired'
                 // );
 
                 const trackerKey = `${med.userid}-${med.id}`;

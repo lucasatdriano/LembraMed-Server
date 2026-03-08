@@ -9,6 +9,10 @@ webpush.setVapidDetails(
 );
 
 export class NotificationService {
+    static getVapidPublicKey() {
+        return process.env.VAPID_PUBLIC_KEY;
+    }
+
     static async sendNotification(userId, title, message, tag) {
         const subscriptions = await models.PushSubscription.findAll({
             where: { userid: userId },
@@ -91,10 +95,6 @@ export class NotificationService {
         return notification;
     }
 
-    static getVapidPublicKey() {
-        return process.env.VAPID_PUBLIC_KEY;
-    }
-
     static async saveSubscription(userId, subscription) {
         try {
             if (!models.PushSubscription) {
@@ -115,8 +115,6 @@ export class NotificationService {
 
             const deviceId = subscription.deviceId || null;
 
-            console.log('📱 Device ID recebido:', deviceId);
-
             const [sub, created] = await models.PushSubscription.findOrCreate({
                 where: { endpoint: subscription.endpoint },
                 defaults: {
@@ -130,7 +128,6 @@ export class NotificationService {
             });
 
             if (!created) {
-                console.log('🔄 Atualizando subscription existente:', sub.id);
                 await sub.update({
                     userid: userId,
                     deviceid: deviceId,
@@ -184,8 +181,8 @@ export class NotificationService {
                 break;
 
             case 'missed':
-                title = '⚠️ Dose Perdida';
-                message = `Você perdeu o horário de ${medicationName} (${doseTime}). Tome assim que possível.`;
+                title = '⚠️ Dose não tomada';
+                message = `Você não tomou o medicamento ${medicationName} no horário de ${doseTime}. Tome assim que possível.`;
                 tag = `med-${medicationId}-missed`;
                 break;
 
@@ -207,21 +204,11 @@ export class NotificationService {
             message,
         });
 
-        console.log(`📝 [PUSH] Notificação salva no banco: ${notification.id}`);
-
         const subscriptions = await models.PushSubscription.findAll({
             where: { userid: userId },
         });
 
-        console.log(
-            `🔍 [PUSH] Encontradas ${subscriptions.length} subscriptions`,
-        );
-
         if (subscriptions.length === 0) {
-            console.log(
-                `⚠️ [PUSH] Nenhuma subscription encontrada para o usuário ${userId}`,
-            );
-            console.log(`📝 [PUSH] Notificação salva apenas no banco de dados`);
             return {
                 success: true,
                 notificationId: notification.id,
@@ -237,8 +224,8 @@ export class NotificationService {
             tag,
             timestamp: new Date().toISOString(),
             icon: '/icons/icon-192x192.png',
-            badge: '/icons/badge-72x72.png',
-            vibrate: [200, 100, 200],
+            badge: '/icons/icon-192x192.png',
+            vibrate: [200, 100, 200, 100, 200],
             data: {
                 medicationId,
                 medicationName,
@@ -265,14 +252,10 @@ export class NotificationService {
                 console.error(`Erro ao enviar:`, error);
 
                 if (error.statusCode === 410) {
-                    console.log(
-                        `🗑️ Subscription ${sub.id} expirada, removendo...`,
-                    );
                     await sub.destroy();
                 }
 
                 if (error.statusCode === 404) {
-                    console.log(`⚠️ Endpoint não encontrado, removendo...`);
                     await sub.destroy();
                 }
 
@@ -314,9 +297,6 @@ export class NotificationService {
                 },
             });
 
-            console.log(
-                `🧹 Limpeza: ${deleted} notificações antigas removidas`,
-            );
             return deleted;
         } catch (error) {
             console.error('Erro ao limpar notificações:', error);

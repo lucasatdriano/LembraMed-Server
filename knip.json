@@ -1,0 +1,7 @@
+{
+    "$schema": "https://unpkg.com/knip@5/schema.json",
+    "entry": ["src/index.js", "server.js", "app.js"],
+    "project": ["**/*.js"],
+    "ignore": ["node_modules/**", "src/docs/swagger/**"],
+    "ignoreDependencies": ["lembramed-server"]
+}

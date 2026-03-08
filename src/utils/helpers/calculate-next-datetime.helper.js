@@ -1,12 +1,31 @@
-import { calcularProximoHorarioCompleto } from './datetime.helper.js';
+import { models } from '../../models/index.js';
+import { calculateNextFullDateTime } from './next-dose-datetime.helper.js';
 
-export function calculateNextDateTime(medication) {
+export async function calculateNextDateTime(medicationJson) {
     try {
-        const proximaData = calcularProximoHorarioCompleto(medication);
+        if (!medicationJson.dataValues) {
+            const medication = await models.Medication.findByPk(
+                medicationJson.id,
+                {
+                    include: [
+                        {
+                            model: models.DoseIntervals,
+                            as: 'doseinterval',
+                        },
+                    ],
+                },
+            );
 
-        return proximaData;
+            if (!medication) return null;
+
+            const nextFullDate = calculateNextFullDateTime(medication);
+            return nextFullDate ? nextFullDate.toISOString() : null;
+        }
+
+        const nextFullDate = calculateNextFullDateTime(medicationJson);
+        return nextFullDate ? nextFullDate.toISOString() : null;
     } catch (error) {
-        console.error('Erro ao calcular próxima data/hora:', error);
+        console.error('[calculateNextDateTime] Erro:', error);
         return null;
     }
 }
