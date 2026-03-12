@@ -122,10 +122,12 @@ export const timezone = {
         const agora = dataReferencia ? this.now(dataReferencia) : this.now();
         const horarioHoje = this.horaParaDate(horarioStr, agora);
 
+        // Se o horário de hoje ainda não passou, usa hoje
         if (agora <= horarioHoje || this.isMesmoHorario(agora, horarioHoje)) {
             return horarioHoje;
         }
 
+        // Se já passou, usa amanhã
         const horarioAmanha = this.horaParaDate(horarioStr, addDays(agora, 1));
         return horarioAmanha;
     },
@@ -154,6 +156,7 @@ export const timezone = {
     ) {
         const agora = dataReferencia ? new Date(dataReferencia) : this.now();
 
+        // Se o intervalo é múltiplo de 24h, mantém o mesmo horário
         if (intervaloHoras >= 24 && intervaloHoras % 24 === 0) {
             const diasParaAdicionar = intervaloHoras / 24;
             const proximaOcorrencia = this.proximaOcorrenciaHorario(
@@ -161,6 +164,7 @@ export const timezone = {
                 agora,
             );
 
+            // Se a próxima ocorrência já passou, avança para o próximo ciclo
             if (isAfter(agora, proximaOcorrencia)) {
                 return addDays(proximaOcorrencia, diasParaAdicionar);
             }
@@ -168,9 +172,11 @@ export const timezone = {
             return proximaOcorrencia;
         }
 
+        // Para intervalos não múltiplos de 24h
         const ultimaData = this.horaParaDate(ultimoHorario, agora);
         let proximaData = addHours(ultimaData, intervaloHoras);
 
+        // Garante que a próxima data é no futuro
         while (isBefore(proximaData, agora)) {
             proximaData = addHours(proximaData, intervaloHoras);
         }

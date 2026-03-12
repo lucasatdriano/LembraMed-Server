@@ -126,4 +126,4 @@ Object.values(models).forEach((model) => {
     }
 });
 
-export { models };
+export { sequelize, models };

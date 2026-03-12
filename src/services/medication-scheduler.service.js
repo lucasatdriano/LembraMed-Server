@@ -3,8 +3,8 @@ import { models } from '../models/index.js';
 import { Op } from 'sequelize';
 import { calcularTolerancia } from '../utils/helpers/dose-rules.helper.js';
 import { timezone } from '../utils/formatters/timezone.js';
+import { proximaOcorrenciaHorario } from '../utils/helpers/datetime.helper.js';
 import medicationNotificationSchedulerService from './medication-notification-scheduler.service.js';
-import { horaToDateComDiaApropriado } from '../utils/helpers/next-dose-datetime.helper.js';
 
 class MedicationScheduler {
     constructor() {
@@ -17,14 +17,20 @@ class MedicationScheduler {
         if (this.initialized) return;
 
         console.log('\n⏰ ========== INICIANDO SCHEDULER ==========');
+        console.log(`⏰ Fuso horário configurado: ${this.timeZone}`);
 
+        // Armazena o momento da inicialização
+        const momentoInicializacao = timezone.now();
+
+        // Executa UMA VEZ o recálculo de doses perdidas
         setTimeout(async () => {
             console.log(
                 `\n🔄 Executando recálculo inicial de doses perdidas...`,
             );
             await this.recalcularDosesPerdidas(timezone.now(), null);
-        }, 5000); // 5s
+        }, 5000); // Aguarda 5 segundos para garantir que tudo carregou
 
+        // RODA A CADA 1 MINUTO (verificação principal)
         cron.schedule('* * * * *', () => {
             this.executionCount++;
             const agora = timezone.now();
@@ -148,13 +154,17 @@ class MedicationScheduler {
 
     encontrarHorarioProgramado(medication, agora) {
         try {
+            // Converte hournextdose para objeto Date
             const [hora, minuto] = medication.hournextdose
                 .split(':')
                 .map(Number);
 
+            // Cria uma data com o horário programado para hoje
             const horarioProgramado = new Date(agora);
             horarioProgramado.setHours(hora, minuto, 0, 0);
 
+            // Se o horário programado for maior que agora, pode ser a dose de amanhã
+            // Mas como estamos lidando com pendinguntil, provavelmente é a dose de hoje
             if (horarioProgramado > agora) {
                 horarioProgramado.setDate(horarioProgramado.getDate() - 1);
             }
@@ -215,6 +225,7 @@ class MedicationScheduler {
                 }
             }
 
+            // Cria novo registro ou continua...
             const historico = await models.MedicationHistory.create({
                 medicationid: medication.id,
                 takendate: agora,
@@ -226,20 +237,17 @@ class MedicationScheduler {
             console.log(`   - taken: ${historico.taken}`);
             console.log(`   - takendate: ${historico.takendate}`);
 
-            const dataTomada = taken
-                ? agora
-                : new Date(agora.getTime() + 60 * 1000);
-            const proximaDataCompleta = this.calcularProximaDataCompleta(
+            const horaTomada = `${agora.getHours().toString().padStart(2, '0')}:${agora.getMinutes().toString().padStart(2, '0')}`;
+            const proximoHorario = this.calcularProximoHorarioComData(
                 medication,
-                dataTomada,
+                taken ? agora : new Date(agora.getTime() + 60 * 1000),
             );
-            const proximoHorario = this.formatTimeFromDate(proximaDataCompleta);
 
             await medication.update({
                 status: false,
                 pendingconfirmation: false,
                 pendinguntil: null,
-                lasttakentime: taken ? this.formatTimeFromDate(agora) : null,
+                lasttakentime: taken ? horaTomada : null,
                 hournextdose: proximoHorario,
             });
 
@@ -295,6 +303,9 @@ class MedicationScheduler {
     async checkMissedDose(medication, agora) {
         console.log(`\n📊 [CHECK_MISSED_DOSE] ==========`);
         console.log(`📊 [CHECK_MISSED_DOSE] Medicamento: ${medication.name}`);
+        console.log(
+            `📊 [CHECK_MISSED_DOSE] pendingconfirmation: ${medication.pendingconfirmation}`,
+        );
 
         if (medication.pendingconfirmation) {
             console.log(
@@ -303,24 +314,23 @@ class MedicationScheduler {
             return;
         }
 
-        const proximaDoseCompleta = await this.getNextFullDoseTime(
-            medication,
+        const proximaOcorrencia = proximaOcorrenciaHorario(
+            medication.hournextdose,
             agora,
         );
 
-        if (!proximaDoseCompleta) {
-            console.log(
-                `📊 [CHECK_MISSED_DOSE] ⏭️ Fora do período de tratamento`,
-            );
-            return;
-        }
-
         console.log(
-            `📊 [CHECK_MISSED_DOSE] Próxima dose completa: ${proximaDoseCompleta.toISOString()}`,
+            `📊 [CHECK_MISSED_DOSE] hournextdose: ${medication.hournextdose}`,
         );
-        console.log(`📊 [CHECK_MISSED_DOSE] Agora: ${agora.toISOString()}`);
+        console.log(
+            `📊 [CHECK_MISSED_DOSE] proximaOcorrencia: ${proximaOcorrencia.toISOString()}`,
+        );
+        console.log(`📊 [CHECK_MISSED_DOSE] agora: ${agora.toISOString()}`);
+        console.log(
+            `📊 [CHECK_MISSED_DOSE] proximaOcorrencia > agora: ${proximaOcorrencia > agora}`,
+        );
 
-        if (proximaDoseCompleta > agora) {
+        if (proximaOcorrencia > agora) {
             console.log(`📊 [CHECK_MISSED_DOSE] ⏭️ Futuro - ignorando`);
             return;
         }
@@ -328,63 +338,98 @@ class MedicationScheduler {
         const toleranciaMinutos = calcularTolerancia(
             medication.doseinterval.intervalinhours,
         );
+
         const diffMinutos =
-            (agora.getTime() - proximaDoseCompleta.getTime()) / (60 * 1000);
+            (agora.getTime() - proximaOcorrencia.getTime()) / (60 * 1000);
 
         console.log(
-            `📊 [CHECK_MISSED_DOSE] Tolerância: ${toleranciaMinutos} minutos`,
+            `📊 [CHECK_MISSED_DOSE] toleranciaMinutos: ${toleranciaMinutos}`,
         );
         console.log(
-            `📊 [CHECK_MISSED_DOSE] Diferença: ${diffMinutos.toFixed(2)} minutos`,
+            `📊 [CHECK_MISSED_DOSE] diffMinutos: ${diffMinutos.toFixed(2)}`,
+        );
+        console.log(
+            `📊 [CHECK_MISSED_DOSE] diff > tolerancia: ${diffMinutos > toleranciaMinutos}`,
         );
 
         if (diffMinutos > toleranciaMinutos) {
-            console.log(`⚠️ [CHECK_MISSED_DOSE] Passou da tolerância!`);
+            console.log(
+                `⚠️ [CHECK_MISSED_DOSE] Passou da tolerância! Verificando histórico...`,
+            );
 
+            // Busca no histórico
             const doseTomadaNoPeriodo = await models.MedicationHistory.findOne({
                 where: {
                     medicationid: medication.id,
                     taken: true,
                     takendate: {
-                        [Op.gte]: proximaDoseCompleta,
+                        [Op.gte]: proximaOcorrencia,
                         [Op.lte]: agora,
                     },
                 },
             });
 
             if (doseTomadaNoPeriodo) {
-                console.log(`✅ Já tomou às ${doseTomadaNoPeriodo.takendate}`);
+                console.log(
+                    `✅ ${medication.name}: Usuário já tomou às ${new Date(doseTomadaNoPeriodo.takendate).toLocaleTimeString()}, ignorando marcação de perdida`,
+                );
 
-                // Calcula próxima dose baseada na data que tomou
-                const proximaData = this.calcularProximaDataCompleta(
+                // Atualiza o hournextdose baseado na dose que o usuário tomou
+                const proximoHorario = this.calcularProximoHorarioComData(
                     medication,
-                    timezone.now(doseTomadaNoPeriodo.takendate),
+                    new Date(doseTomadaNoPeriodo.takendate), // Usa a data que o usuário tomou
                 );
 
                 await medication.update({
-                    hournextdose: this.formatTimeFromDate(proximaData),
+                    hournextdose: proximoHorario,
                 });
 
+                console.log(
+                    `✅ ${medication.name} atualizado - Próxima dose: ${proximoHorario}`,
+                );
                 return;
             }
 
-            console.log(`⚠️ Registrando como dose perdida`);
+            console.log(
+                `⚠️ [CHECK_MISSED_DOSE] Nenhum registro de tomada - registrando como perdida`,
+            );
 
+            console.log(`⚠️ Dose perdida detectada: ${medication.name}`);
+
+            // Verifica se já registrou nos últimos minutos
+            const ultimoRegistro = await models.MedicationHistory.findOne({
+                where: {
+                    medicationid: medication.id,
+                    takendate: {
+                        [Op.gte]: new Date(agora.getTime() - 5 * 60 * 1000),
+                    },
+                },
+            });
+
+            if (ultimoRegistro) {
+                return;
+            }
+
+            // Registra dose perdida
             await models.MedicationHistory.create({
                 medicationid: medication.id,
-                takendate: proximaDoseCompleta,
+                takendate: agora,
                 taken: false,
             });
 
-            const proximaData = this.calcularProximaDataCompleta(
+            // Calcula próximo horário
+            const proximoHorario = this.calcularProximoHorarioComData(
                 medication,
-                proximaDoseCompleta,
+                agora,
             );
 
             await medication.update({
-                hournextdose: this.formatTimeFromDate(proximaData),
+                hournextdose: proximoHorario,
             });
+
+            console.log(`✅ Dose perdida registrada - Próx: ${proximoHorario}`);
         }
+        console.log(`📊 [CHECK_MISSED_DOSE] ========== FIM ==========\n`);
     }
 
     async recalcularDosesPerdidas(agora, ultimaExecucao) {
@@ -451,6 +496,7 @@ class MedicationScheduler {
             const intervaloHoras = medication.doseinterval.intervalinhours;
             const intervaloMs = intervaloHoras * 60 * 60 * 1000;
 
+            // Busca o último registro no histórico
             const ultimoRegistro = await models.MedicationHistory.findOne({
                 where: { medicationid: medication.id },
                 order: [['takendate', 'DESC']],
@@ -467,16 +513,18 @@ class MedicationScheduler {
                 // Se não tem histórico, usa periodstart ou 7 dias atrás (para não sobrecarregar)
                 dataReferencia = medication.periodstart
                     ? new Date(medication.periodstart)
-                    : new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000); // 7d
+                    : new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 dias atrás
                 console.log(
                     `📅 Sem histórico, usando data referência: ${dataReferencia.toISOString()}`,
                 );
             }
 
+            // Converte hournextdose para objeto Date
             const [horaNext, minutoNext] = medication.hournextdose
                 .split(':')
                 .map(Number);
 
+            // Encontra a primeira dose após a data de referência
             let primeiraDose = new Date(dataReferencia);
             primeiraDose.setHours(horaNext, minutoNext, 0, 0);
 
@@ -489,6 +537,7 @@ class MedicationScheduler {
                 `🕐 Primeira dose após referência: ${primeiraDose.toISOString()}`,
             );
 
+            // Verifica todas as doses que deveriam ter ocorrido até AGORA
             let dosesPerdidas = [];
             let doseAtual = new Date(primeiraDose);
             let count = 0;
@@ -515,8 +564,12 @@ class MedicationScheduler {
                     }));
 
                     await models.MedicationHistory.bulkCreate(historyEntries);
+                    console.log(
+                        `📝 Lote ${Math.floor(i / batchSize) + 1}: ${batch.length} doses registradas`,
+                    );
                 }
 
+                // Atualiza para a PRÓXIMA dose futura
                 const proximaDoseFormatada = `${doseAtual.getHours().toString().padStart(2, '0')}:${doseAtual.getMinutes().toString().padStart(2, '0')}`;
 
                 await medication.update({
@@ -527,6 +580,14 @@ class MedicationScheduler {
                 console.log(
                     `✅ ${medication.name} atualizado - Próxima dose: ${proximaDoseFormatada}`,
                 );
+
+                // Opcional: Disparar notificações para doses perdidas
+                if (dosesPerdidas.length > 0) {
+                    console.log(
+                        `📱 Seriam disparadas ${dosesPerdidas.length} notificações de doses perdidas`,
+                    );
+                    // Aqui você pode integrar com seu sistema de notificações
+                }
             } else {
                 console.log(
                     `✅ ${medication.name}: Nenhuma dose perdida encontrada`,
@@ -561,6 +622,7 @@ class MedicationScheduler {
                     `⚠️ Dose perdida detectada: ${medication.name} em ${doseProgramada.toISOString()}`,
                 );
 
+                // Registra a dose perdida
                 await models.MedicationHistory.create({
                     medicationid: medication.id,
                     takendate: doseProgramada,
@@ -588,47 +650,6 @@ class MedicationScheduler {
         );
     }
 
-    async getNextFullDoseTime(medication, referenceDate) {
-        if (medication.pendingconfirmation && medication.pendinguntil) {
-            return timezone.now(medication.pendinguntil);
-        }
-
-        const lastHistory = await models.MedicationHistory.findOne({
-            where: { medicationid: medication.id },
-            order: [['takendate', 'DESC']],
-        });
-
-        const intervaloMs =
-            (medication.doseinterval?.intervalinhours || 0) * 60 * 60 * 1000;
-
-        if (lastHistory) {
-            const lastDate = timezone.now(lastHistory.takendate);
-
-            if (lastHistory.taken) {
-                // Se tomou, próxima = última + intervalo
-                return new Date(lastDate.getTime() + intervaloMs);
-            } else {
-                // Se perdeu, mantém a data (já é a próxima)
-                return lastDate;
-            }
-        }
-
-        return horaToDateComDiaApropriado(
-            medication.hournextdose,
-            referenceDate,
-        );
-    }
-
-    calcularProximaDataCompleta(medication, dataBase) {
-        const intervaloMs =
-            (medication.doseinterval?.intervalinhours || 0) * 60 * 60 * 1000;
-        return new Date(dataBase.getTime() + intervaloMs);
-    }
-
-    formatTimeFromDate(date) {
-        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-    }
-
     calcularProximoHorarioComData(medication, agora) {
         const intervalo = medication.doseinterval.intervalinhours;
 
@@ -642,6 +663,7 @@ class MedicationScheduler {
         const proximaDose = new Date(agora);
         proximaDose.setHours(horas, minutos, 0, 0);
 
+        // Adiciona ciclos até passar de agora
         while (proximaDose <= agora) {
             proximaDose.setHours(proximaDose.getHours() + intervalo);
         }

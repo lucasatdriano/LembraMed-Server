@@ -3,11 +3,6 @@
     "version": "1.0.0",
     "main": "src/server.js",
     "type": "module",
-    "scripts": {
-        "dev": "npx nodemon src/server.js",
-        "start": "node src/server.js",
-        "check": "npx knip"
-    },
     "dependencies": {
         "bcrypt": "^5.1.1",
         "bcryptjs": "^3.0.2",
@@ -29,13 +24,13 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.22.0",
-        "eslint": "^9.39.4",
-        "eslint-plugin-import": "^2.32.0",
+        "eslint": "^9.22.0",
         "eslint-plugin-react": "^7.37.4",
-        "fs": "^0.0.1-security",
-        "glob": "^13.0.6",
         "globals": "^16.0.0",
-        "knip": "^5.86.0",
         "nodemon": "^3.1.9"
+    },
+    "scripts": {
+        "dev": "npx nodemon src/server.js",
+        "start": "node src/server.js"
     }
 }
