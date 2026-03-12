@@ -3,43 +3,6 @@ import { models } from '../models/index.js';
 import { NotificationService } from './notification.service.js';
 
 export class ContactService {
-    static async getContacts(userId, page, limit) {
-        const pageNumber = parseInt(page);
-        const limitNumber = parseInt(limit);
-        const offset = (pageNumber - 1) * limitNumber;
-
-        const { count, rows: contacts } = await models.Contact.findAndCountAll({
-            where: { userid: userId },
-            attributes: ['id', 'name', 'numberphone'],
-            limit: parseInt(limit),
-            offset: offset,
-            order: [['name', 'ASC']],
-        });
-
-        return {
-            contacts,
-            pagination: {
-                currentPage: parseInt(page),
-                totalPages: Math.ceil(count / limit),
-                totalRecords: count,
-                hasNext: offset + contacts.length < count,
-                hasPrev: page > 1,
-            },
-        };
-    }
-
-    static async getContactById(userId, contactId) {
-        const contact = await models.Contact.findOne({
-            where: {
-                id: contactId,
-                userid: userId,
-            },
-            attributes: ['id', 'name', 'numberphone'],
-        });
-
-        return contact;
-    }
-
     static async findContacts(userId, search, page, limit) {
         const whereClause = { userid: userId };
         const pageNumber = parseInt(page);
@@ -83,6 +46,18 @@ export class ContactService {
                 hasPrev: page > 1,
             },
         };
+    }
+
+    static async getContactById(userId, contactId) {
+        const contact = await models.Contact.findOne({
+            where: {
+                id: contactId,
+                userid: userId,
+            },
+            attributes: ['id', 'name', 'numberphone'],
+        });
+
+        return contact;
     }
 
     static async createContact(userId, name, numberphone) {

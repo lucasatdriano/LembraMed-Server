@@ -1,17 +1,22 @@
 import { ContactService } from '../services/contact.service.js';
 import { validationContact } from '../utils/validations/contact.validation.js';
 
-export async function getContacts(req, res) {
-    const { page = 1, limit = 20 } = req.query;
+export async function findContacts(req, res) {
+    const { search, page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
     try {
-        const result = await ContactService.getContacts(userId, page, limit);
+        const result = await ContactService.findContacts(
+            userId,
+            search,
+            page,
+            limit,
+        );
 
         res.json(result);
     } catch (error) {
         res.status(500).json({
-            error: 'Erro ao buscar contatos.',
+            error: 'Erro ao buscar contato.',
             details: error.message,
         });
     }
@@ -29,27 +34,6 @@ export async function getContactById(req, res) {
         }
 
         res.json(contact);
-    } catch (error) {
-        res.status(500).json({
-            error: 'Erro ao buscar contato.',
-            details: error.message,
-        });
-    }
-}
-
-export async function findContacts(req, res) {
-    const { search, page = 1, limit = 20 } = req.query;
-    const userId = req.user.userId;
-
-    try {
-        const result = await ContactService.findContacts(
-            userId,
-            search,
-            page,
-            limit,
-        );
-
-        res.json(result);
     } catch (error) {
         res.status(500).json({
             error: 'Erro ao buscar contato.',

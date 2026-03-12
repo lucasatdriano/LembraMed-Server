@@ -8,107 +8,6 @@ import {
 import { calculateNextDateTime } from '../utils/helpers/calculate-next-datetime.helper.js';
 
 export class MedicationService {
-    static async getMedications(userId, page, limit) {
-        const pageNumber = parseInt(page);
-        const limitNumber = parseInt(limit);
-        const offset = (pageNumber - 1) * limitNumber;
-
-        const { count, rows: medications } =
-            await models.Medication.findAndCountAll({
-                where: { userid: userId },
-                attributes: [
-                    'id',
-                    'name',
-                    'hournextdose',
-                    'periodstart',
-                    'periodend',
-                    'status',
-                    'pendingconfirmation',
-                    'pendinguntil',
-                    'lasttakentime',
-                    'createdat',
-                ],
-                include: [
-                    {
-                        model: models.DoseIntervals,
-                        as: 'doseinterval',
-                        attributes: ['id', 'intervalinhours'],
-                    },
-                    {
-                        model: models.MedicationHistory,
-                        as: 'history',
-                        limit: 10,
-                        order: [['createdat', 'DESC']],
-                    },
-                ],
-                limit: parseInt(limit),
-                offset: offset,
-            });
-
-        const medicationsWithNextDate = medications.map((med) => {
-            const medJson = med.toJSON();
-            medJson.nextDateTime = calculateNextDateTime(medJson);
-            return medJson;
-        });
-
-        const activeMedications = medicationsWithNextDate
-            .filter((med) => med.nextDateTime !== null)
-            .sort((a, b) => a.nextDateTime - b.nextDateTime);
-
-        const inactiveMedications = medicationsWithNextDate.filter(
-            (med) => med.nextDateTime === null,
-        );
-
-        const allMedications = [...activeMedications, ...inactiveMedications];
-
-        return {
-            medications: allMedications,
-            pagination: {
-                currentPage: parseInt(page),
-                totalPages: Math.ceil(count / limit),
-                totalRecords: count,
-                hasNext: offset + medications.length < count,
-                hasPrev: page > 1,
-            },
-        };
-    }
-
-    static async getMedicationById(userId, medicationId) {
-        const medication = await models.Medication.findOne({
-            where: {
-                id: medicationId,
-                userid: userId,
-            },
-            attributes: [
-                'id',
-                'name',
-                'hournextdose',
-                'periodstart',
-                'periodend',
-                'status',
-                'pendingconfirmation',
-                'pendinguntil',
-                'lasttakentime',
-                'createdat',
-            ],
-            include: [
-                {
-                    model: models.DoseIntervals,
-                    as: 'doseinterval',
-                    attributes: ['id', 'intervalinhours'],
-                },
-                {
-                    model: models.MedicationHistory,
-                    as: 'history',
-                    order: [['createdat', 'DESC']],
-                    limit: 20,
-                },
-            ],
-        });
-
-        return medication;
-    }
-
     static async findMedications(userId, search, page, limit) {
         const whereClause = { userid: userId };
         const pageNumber = parseInt(page);
@@ -182,6 +81,42 @@ export class MedicationService {
                 hasPrev: page > 1,
             },
         };
+    }
+
+    static async getMedicationById(userId, medicationId) {
+        const medication = await models.Medication.findOne({
+            where: {
+                id: medicationId,
+                userid: userId,
+            },
+            attributes: [
+                'id',
+                'name',
+                'hournextdose',
+                'periodstart',
+                'periodend',
+                'status',
+                'pendingconfirmation',
+                'pendinguntil',
+                'lasttakentime',
+                'createdat',
+            ],
+            include: [
+                {
+                    model: models.DoseIntervals,
+                    as: 'doseinterval',
+                    attributes: ['id', 'intervalinhours'],
+                },
+                {
+                    model: models.MedicationHistory,
+                    as: 'history',
+                    order: [['createdat', 'DESC']],
+                    limit: 20,
+                },
+            ],
+        });
+
+        return medication;
     }
 
     static async getMedicationHistory(userId, medicationId, filters) {
@@ -304,6 +239,33 @@ export class MedicationService {
         if (!medication) {
             console.log(`🔴 [REGISTER_PENDING] Medicamento NÃO encontrado!`);
             throw new Error('Medicamento não encontrado');
+        }
+
+        if (medication.doseinterval.intervalinhours >= 24) {
+            const inicioHoje = timezone.inicioDoDia(agora);
+            const fimHoje = timezone.fimDoDia(agora);
+
+            const doseHoje = await models.MedicationHistory.findOne({
+                where: {
+                    medicationid: medication.id,
+                    taken: true,
+                    takendate: {
+                        [Op.between]: [inicioHoje, fimHoje],
+                    },
+                },
+            });
+
+            if (doseHoje) {
+                const error = new Error(
+                    'Esta dose já foi registrada hoje. A próxima será amanhã.',
+                );
+
+                error.details = {
+                    message: 'Esta dose já foi registrada hoje.',
+                };
+
+                throw error;
+            }
         }
 
         console.log(

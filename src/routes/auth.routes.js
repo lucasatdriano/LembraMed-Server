@@ -8,9 +8,9 @@ import {
 
 const router = express.Router();
 
-router.post('/refreshtoken', refreshMultiAccountToken);
-router.put('/tokenstatus', tokenStatus);
-router.post('/forgotpassword', forgotPassword);
-router.put('/resetpassword', resetPassword);
+router.post('/refresh-token', refreshMultiAccountToken);
+router.put('/token-status', tokenStatus);
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password', resetPassword);
 
 export default router;

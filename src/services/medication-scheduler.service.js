@@ -314,10 +314,33 @@ class MedicationScheduler {
             return;
         }
 
-        const proximaOcorrencia = proximaOcorrenciaHorario(
-            medication.hournextdose,
-            agora,
-        );
+        const ultimaDoseHoje = await models.MedicationHistory.findOne({
+            where: {
+                medicationid: medication.id,
+                taken: true,
+                takendate: {
+                    [Op.gte]: timezone.inicioDoDia(agora),
+                    [Op.lte]: timezone.fimDoDia(agora),
+                },
+            },
+        });
+
+        let proximaOcorrencia;
+
+        if (ultimaDoseHoje && medication.doseinterval.intervalinhours >= 24) {
+            const [hora, minuto] = medication.hournextdose
+                .split(':')
+                .map(Number);
+
+            proximaOcorrencia = new Date(agora);
+            proximaOcorrencia.setDate(proximaOcorrencia.getDate() + 1);
+            proximaOcorrencia.setHours(hora, minuto, 0, 0);
+        } else {
+            proximaOcorrencia = proximaOcorrenciaHorario(
+                medication.hournextdose,
+                agora,
+            );
+        }
 
         console.log(
             `📊 [CHECK_MISSED_DOSE] hournextdose: ${medication.hournextdose}`,
