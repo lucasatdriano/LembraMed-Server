@@ -4,9 +4,9 @@ import {
     sendNotification,
     getNotifications,
     markAsRead,
-    markAsRead,
     subscribe,
     unsubscribe,
+    getVapidPublicKey,
 } from '../controllers/notification.controller.js';
 
 const router = express.Router();
