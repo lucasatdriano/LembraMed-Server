@@ -1,94 +1,56 @@
-import { ContactService } from '../services/contact.service.js';
+import { ContactService } from '../services/contact/contact.service.js';
 import { validationContact } from '../utils/validations/contact.validation.js';
+import { AppError } from '../utils/errors/app.error.js';
 
 export async function findContacts(req, res) {
     const { search, page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
-    try {
-        const result = await ContactService.findContacts(
-            userId,
-            search,
-            page,
-            limit,
-        );
+    const result = await ContactService.findContacts(
+        userId,
+        search,
+        page,
+        limit,
+    );
 
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            error: 'Erro ao buscar contato.',
-            details: error.message,
-        });
-    }
+    return res.json(result);
 }
 
 export async function getContactById(req, res) {
     const { contactid } = req.params;
     const userId = req.user.userId;
 
-    try {
-        const contact = await ContactService.getContactById(userId, contactid);
+    const contact = await ContactService.getContactById(userId, contactid);
 
-        if (!contact) {
-            return res.status(404).json({ error: 'Contato não encontrado' });
-        }
-
-        res.json(contact);
-    } catch (error) {
-        res.status(500).json({
-            error: 'Erro ao buscar contato.',
-            details: error.message,
-        });
+    if (!contact) {
+        throw new AppError('Contato não encontrado', 404);
     }
+
+    return res.json(contact);
 }
 
 export async function createContact(req, res) {
     const userId = req.user.userId;
     const { name, numberphone } = req.body;
 
-    try {
-        const validationResult = validationContact.contact({
-            name,
-            numberphone,
-        });
+    const validation = validationContact.contact({
+        name,
+        numberphone,
+    });
 
-        if (!validationResult.isValid) {
-            console.log('❌ Erros de validação:', validationResult.errors);
-            return res.status(400).json({
-                error: 'Dados inválidos',
-                details: validationResult.errors,
-            });
-        }
-
-        const newContact = await ContactService.createContact(
-            userId,
-            name,
-            numberphone,
-        );
-
-        res.status(201).json(newContact);
-    } catch (error) {
-        console.error('Erro ao criar contato:', error);
-
-        if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(400).json({
-                error: 'Erro ao criar contato',
-                details: ['Este número de telefone já está cadastrado'],
-            });
-        }
-
-        if (error.name === 'SequelizeValidationError') {
-            return res.status(400).json({
-                error: 'Erro de validação',
-                details: error.errors.map((e) => e.message),
-            });
-        }
-
-        res.status(500).json({
-            error: 'Erro ao criar contato.',
-            details: error.message,
-        });
+    if (!validation.isValid) {
+        throw new AppError('Dados inválidos', 400);
     }
+
+    const { normalized } = validation;
+
+    const newContact = await ContactService.createContact(
+        userId,
+        normalized.name,
+        normalized.numberphone,
+    );
+
+    return res.status(201).json(newContact);
 }
 
 export async function updateContact(req, res) {
@@ -96,84 +58,43 @@ export async function updateContact(req, res) {
     const userId = req.user.userId;
     const { name, numberphone } = req.body;
 
-    try {
-        const errors = [];
+    const validations = [];
 
-        if (name) {
-            const nameValidation = validationContact.contactName(name);
-            errors.push(...nameValidation.errors);
-        }
+    if (name) validations.push(validationContact.contactName(name));
+    if (numberphone)
+        validations.push(validationContact.phoneNumber(numberphone));
 
-        if (numberphone) {
-            const phoneValidation = validationContact.phoneNumber(numberphone);
-            errors.push(...phoneValidation.errors);
-        }
+    const errors = validations.flatMap((v) => v.errors);
 
-        if (errors.length > 0) {
-            return res.status(400).json({
-                error: 'Dados inválidos',
-                details: errors,
-            });
-        }
-
-        const updatedContact = await ContactService.updateContact(
-            userId,
-            contactid,
-            name,
-            numberphone,
-        );
-
-        if (!updatedContact) {
-            return res.status(404).json({ error: 'Contato não encontrado.' });
-        }
-
-        res.status(200).json(updatedContact);
-    } catch (error) {
-        console.error('Erro ao atualizar contato:', error);
-
-        if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(400).json({
-                error: 'Erro ao atualizar contato',
-                details: [
-                    'Este número de telefone já está cadastrado para outro contato',
-                ],
-            });
-        }
-
-        if (error.name === 'SequelizeValidationError') {
-            return res.status(400).json({
-                error: 'Erro de validação',
-                details: error.errors.map((e) => e.message),
-            });
-        }
-
-        res.status(500).json({
-            error: 'Erro ao atualizar contato.',
-            details: error.message,
-        });
+    if (errors.length > 0) {
+        throw new AppError('Dados inválidos', 400);
     }
+
+    const updatedContact = await ContactService.updateContact(
+        userId,
+        contactid,
+        name,
+        numberphone,
+    );
+
+    if (!updatedContact) {
+        throw new AppError('Contato não encontrado', 404);
+    }
+
+    return res.json(updatedContact);
 }
 
 export async function deleteContact(req, res) {
     const { contactid } = req.params;
     const userId = req.user.userId;
 
-    try {
-        const result = await ContactService.deleteContact(userId, contactid);
+    const result = await ContactService.deleteContact(userId, contactid);
 
-        if (!result) {
-            return res.status(404).json({
-                error: 'Contato não encontrado.',
-            });
-        }
-
-        res.status(200).json({
-            message: `Contato de ${result.contactName} deletado com sucesso.`,
-        });
-    } catch (error) {
-        res.status(500).json({
-            error: 'Erro ao deletar contato.',
-            details: error.message,
-        });
+    if (!result) {
+        throw new AppError('Contato não encontrado', 404);
     }
+
+    return res.json({
+        message: `Contato de ${result.contactName} deletado com sucesso.`,
+    });
 }

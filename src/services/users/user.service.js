@@ -1,8 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { models } from '../models/index.js';
-import { generateUniqueUsername } from '../utils/helpers/generate-username.helper.js';
-import { TokenService } from '../services/token.service.js';
-import { timezone } from '../utils/formatters/timezone.js';
+import { generateUniqueUsername } from '../../utils/helpers/generate-username.helper.js';
+import { TokenService } from '../auth/token.service.js';
+import { timezone } from '../../utils/formatters/timezone.js';
+import { UserRepository } from '../../repositories/user.repository.js';
+import { AccountDeviceRepository } from '../../repositories/account-device.repository.js';
+import { PushSubscriptionRepository } from '../../repositories/push-subscription.repository.js';
+import { DeviceRepository } from '../../repositories/device.repository.js';
 
 export class UserService {
     static async register(name, password) {
@@ -12,7 +15,7 @@ export class UserService {
             throw new Error('Nome de usuário indisponível');
         }
 
-        const newUser = await models.User.create({
+        const newUser = await UserRepository.create({
             id: uuidv4(),
             name: name.trim(),
             username: username,
@@ -30,9 +33,7 @@ export class UserService {
     }
 
     static async loginMultiAccount(username, password, deviceId, deviceName) {
-        const user = await models.User.findOne({
-            where: { username },
-        });
+        const user = await UserRepository.findByUsername(username);
 
         if (!user) {
             throw new Error('Usuário não encontrado');
@@ -42,37 +43,32 @@ export class UserService {
             throw new Error('Senha incorreta');
         }
 
-        const [device] = await models.Device.findOrCreate({
-            where: { id: deviceId },
-            defaults: {
-                name:
-                    deviceName?.trim() ||
-                    `Dispositivo ${timezone.now().toLocaleDateString('pt-BR')}`,
-            },
-        });
+        const device = await DeviceRepository.findOrCreateDevice(
+            deviceId,
+            deviceName?.trim() ||
+                `Dispositivo ${timezone.now().toLocaleDateString('pt-BR')}`,
+        );
 
-        await device.update({ lastseen: timezone.now() });
+        await DeviceRepository.updateLastSeen(deviceId, timezone.now());
 
         const { accessToken, refreshToken } = await TokenService.generateTokens(
             user.id,
             deviceId,
         );
 
-        const [accountDevice] = await models.AccountDevice.findOrCreate({
-            where: {
-                userid: user.id,
-                deviceid: deviceId,
-            },
-            defaults: {
-                accesstoken: accessToken,
-            },
-        });
+        const [accountDevice] = await AccountDeviceRepository.findOrCreate(
+            user.id,
+            deviceId,
+            accessToken,
+        );
 
         if (!accountDevice.isNewRecord) {
-            await accountDevice.update({
-                accesstoken: accessToken,
-                lastused: timezone.now(),
-            });
+            await AccountDeviceRepository.updateAccessToken(
+                user.id,
+                deviceId,
+                accessToken,
+                timezone.now(),
+            );
         }
 
         return {
@@ -91,9 +87,7 @@ export class UserService {
     }
 
     static async getUserById(userId) {
-        const user = await models.User.findByPk(userId, {
-            attributes: ['id', 'name', 'username', 'password', 'createdat'],
-        });
+        const user = await UserRepository.findById(userId);
 
         return user;
     }
@@ -101,13 +95,9 @@ export class UserService {
     static async logoutAccount(userId, deviceId) {
         await TokenService.revokeAllUserTokens(userId, deviceId);
 
-        await models.AccountDevice.destroy({
-            where: { userid: userId, deviceid: deviceId },
-        });
+        await AccountDeviceRepository.deleteAccount(userId, deviceId);
 
-        await models.PushSubscription.destroy({
-            where: { userid: userId, deviceid: deviceId },
-        });
+        await PushSubscriptionRepository.deleteSubscription(userId, deviceId);
 
         return {
             success: true,

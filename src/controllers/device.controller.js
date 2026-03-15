@@ -1,62 +1,44 @@
-import { DeviceService } from '../services/device.service.js';
+import { DeviceService } from '../services/device/device.service.js';
+import { AppError } from '../utils/errors/app.error.js';
 
 export async function getDeviceAccounts(req, res) {
-    try {
-        const { deviceid } = req.params;
+    const { deviceid } = req.params;
 
-        const formattedAccounts =
-            await DeviceService.getDeviceAccounts(deviceid);
+    const accounts = await DeviceService.getDeviceAccounts(deviceid);
 
-        res.json({ success: true, accounts: formattedAccounts });
-    } catch (error) {
-        console.error('Erro ao buscar contas do dispositivo:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
+    return res.json({
+        success: true,
+        accounts,
+    });
 }
 
 export async function registerPushSubscription(req, res) {
-    try {
-        const { userid, deviceid, subscription } = req.body;
+    const { userid, deviceid, subscription } = req.body;
 
-        if (!userid || !deviceid || !subscription) {
-            return res.status(400).json({
-                error: 'UserID, deviceId e subscription são obrigatórios',
-            });
-        }
-
-        const result = await DeviceService.registerPushSubscription(
-            userid,
-            deviceid,
-            subscription,
+    if (!userid || !deviceid || !subscription) {
+        throw new AppError(
+            'UserID, deviceId e subscription são obrigatórios',
+            400,
         );
-
-        res.json({
-            success: true,
-            message: 'Subscription registrada com sucesso',
-            subscriptionId: result.subscriptionId,
-        });
-    } catch (error) {
-        console.error('Erro ao registrar subscription:', error);
-
-        if (error.message === 'Conta não encontrada neste dispositivo') {
-            return res.status(404).json({
-                error: error.message,
-            });
-        }
-
-        res.status(500).json({ error: 'Erro interno do servidor' });
     }
+
+    const result = await DeviceService.registerPushSubscription(
+        userid,
+        deviceid,
+        subscription,
+    );
+
+    return res.json({
+        success: true,
+        message: 'Subscription registrada com sucesso',
+        subscriptionId: result.subscriptionId,
+    });
 }
 
 export async function removeDevice(req, res) {
-    try {
-        const { deviceId } = req.params;
+    const { deviceid } = req.params;
 
-        await DeviceService.removeDevice(deviceId);
+    const result = await DeviceService.removeDevice(deviceid);
 
-        res.json({ success: true, message: 'Dispositivo removido' });
-    } catch (error) {
-        console.error('Erro ao remover dispositivo:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
+    return res.json(result);
 }

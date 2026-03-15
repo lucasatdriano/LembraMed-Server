@@ -1,34 +1,26 @@
 import { timezone } from '../formatters/timezone.js';
-
-export function horaParaDate(horaStr, dataBase = null) {
-    return timezone.horaParaDate(horaStr, dataBase);
-}
-
-export function proximaOcorrenciaHorario(horarioStr, dataReferencia = null) {
-    return timezone.proximaOcorrenciaHorario(horarioStr, dataReferencia);
-}
+import {
+    calcularProximoHorario,
+    proximaOcorrenciaHorario,
+} from './medication-time.helper.js';
 
 export function calcularProximoHorarioCompleto(
     medicamento,
     dataReferencia = null,
 ) {
-    const agora = dataReferencia
-        ? timezone.now(dataReferencia)
-        : timezone.now();
+    const agora = timezone.now(dataReferencia);
 
     if (medicamento.pendinguntil) {
         return timezone.now(medicamento.pendinguntil);
     }
 
     if (medicamento.lasttakentime && medicamento.doseinterval) {
-        const proximaDose = timezone.calcularProximoHorario(
+        return calcularProximoHorario(
             medicamento.lasttakentime,
             medicamento.doseinterval.intervalinhours,
             agora,
         );
-
-        return proximaDose;
     }
 
-    return timezone.proximaOcorrenciaHorario(medicamento.hournextdose, agora);
+    return proximaOcorrenciaHorario(medicamento.hournextdose, agora);
 }

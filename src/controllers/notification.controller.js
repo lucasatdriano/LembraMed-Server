@@ -1,163 +1,101 @@
-import { NotificationService } from '../services/notification.service.js';
+import { NotificationService } from '../services/notification/notification.service.js';
+import { AppError } from '../utils/errors/app.error.js';
 
 export async function getVapidPublicKey(req, res) {
-    try {
-        const publicKey = process.env.VAPID_PUBLIC_KEY;
-        if (!publicKey) {
-            return res.status(500).json({
-                error: 'VAPID public key não configurada',
-            });
-        }
-        res.json({ publicKey });
-    } catch (error) {
-        console.error('Erro ao buscar chave VAPID:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+
+    if (!publicKey) {
+        throw new AppError('VAPID public key não configurada', 500);
     }
+
+    return res.json({ publicKey });
 }
 
 export async function subscribe(req, res) {
-    try {
-        const userId = req.user.userId;
-        const subscription = req.body;
+    const userId = req.user.userId;
+    const subscription = req.body;
 
-        if (!subscription) {
-            console.error('Subscription não fornecida');
-            return res
-                .status(400)
-                .json({ error: 'Subscription não fornecida' });
-        }
-
-        if (!subscription.endpoint) {
-            console.error('❌ Endpoint não fornecido');
-            return res.status(400).json({ error: 'Endpoint não fornecido' });
-        }
-
-        if (
-            !subscription.keys ||
-            !subscription.keys.p256dh ||
-            !subscription.keys.auth
-        ) {
-            console.error('❌ Chaves da subscription inválidas');
-            return res
-                .status(400)
-                .json({ error: 'Chaves da subscription inválidas' });
-        }
-
-        const result = await NotificationService.saveSubscription(
-            userId,
-            subscription,
-        );
-
-        res.json({
-            success: true,
-            message: 'Inscrição realizada com sucesso',
-            subscriptionId: result.id,
-        });
-    } catch (error) {
-        console.error('Erro ao salvar subscription:', error);
-        console.error('Stack trace:', error.stack);
-        res.status(500).json({
-            error: 'Erro interno do servidor',
-            details: error.message,
-        });
+    if (!subscription?.endpoint) {
+        throw new AppError('Endpoint não fornecido', 400);
     }
+
+    if (!subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+        throw new AppError('Chaves da subscription inválidas', 400);
+    }
+
+    const result = await NotificationService.saveSubscription(
+        userId,
+        subscription,
+    );
+
+    return res.json({
+        success: true,
+        message: 'Inscrição realizada com sucesso',
+        subscriptionId: result.id,
+    });
 }
 
 export async function unsubscribe(req, res) {
-    try {
-        const { endpoint } = req.body;
+    const { endpoint } = req.body;
 
-        if (!endpoint) {
-            return res.status(400).json({ error: 'Endpoint é obrigatório' });
-        }
-
-        await NotificationService.removeSubscription(endpoint);
-
-        res.json({
-            success: true,
-            message: 'Inscrição removida com sucesso',
-        });
-    } catch (error) {
-        console.error('Erro ao remover subscription:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+    if (!endpoint) {
+        throw new AppError('Endpoint é obrigatório', 400);
     }
+
+    await NotificationService.removeSubscription(endpoint);
+
+    return res.json({
+        success: true,
+        message: 'Inscrição removida com sucesso',
+    });
 }
 
 export async function sendNotification(req, res) {
-    try {
-        const { title, message, tag } = req.body;
-        const userId = req.user.userId;
+    const userId = req.user.userId;
+    const { title, message, tag } = req.body;
 
-        if (!title) {
-            return res.status(400).json({
-                error: 'Título é obrigatório',
-            });
-        }
-
-        const result = await NotificationService.sendNotification(
-            userId,
-            title,
-            message,
-            tag,
-        );
-
-        res.json(result);
-    } catch (error) {
-        console.error('Erro ao enviar notificação:', error);
-
-        if (
-            error.message ===
-            'Nenhuma subscription encontrada para este usuário'
-        ) {
-            return res.status(404).json({
-                error: error.message,
-            });
-        }
-
-        res.status(500).json({ error: 'Erro interno do servidor' });
+    if (!title) {
+        throw new AppError('Título é obrigatório', 400);
     }
+
+    const result = await NotificationService.sendNotification(
+        userId,
+        title,
+        message,
+        tag,
+    );
+
+    return res.json(result);
 }
 
 export async function getNotifications(req, res) {
-    try {
-        const { limit = 50, offset = 0 } = req.query;
-        const userId = req.user.userId;
+    const userId = req.user.userId;
+    const { limit = 50, offset = 0 } = req.query;
 
-        const notifications = await NotificationService.getNotifications(
-            userId,
-            limit,
-            offset,
-        );
+    const notifications = await NotificationService.getNotifications(
+        userId,
+        Number(limit),
+        Number(offset),
+    );
 
-        res.json({ success: true, notifications });
-    } catch (error) {
-        console.error('Erro ao buscar notificações:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
-    }
+    return res.json({
+        success: true,
+        notifications,
+    });
 }
 
 export async function markAsRead(req, res) {
-    try {
-        const { notificationId } = req.params;
-        const userId = req.user.userId;
+    const userId = req.user.userId;
+    const { notificationId } = req.params;
 
-        const result = await NotificationService.markAsRead(
-            userId,
-            notificationId,
-        );
+    const result = await NotificationService.markAsRead(userId, notificationId);
 
-        if (!result) {
-            return res
-                .status(404)
-                .json({ error: 'Notificação não encontrada' });
-        }
-
-        res.json({
-            success: true,
-            message: 'Notificação marcada como lida',
-        });
-    } catch (error) {
-        console.error('Erro ao marcar notificação como lida:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
+    if (!result) {
+        throw new AppError('Notificação não encontrada', 404);
     }
+
+    return res.json({
+        success: true,
+        message: 'Notificação marcada como lida',
+    });
 }

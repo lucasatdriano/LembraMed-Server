@@ -1,58 +1,41 @@
-import { MedicationService } from '../services/medication.service.js';
+import { MedicationDoseService } from '../services/medication/medication-dose.service.js';
+import { MedicationHistoryService } from '../services/medication/medication-history.service.js';
+import { MedicationService } from '../services/medication/medication.service.js';
+import { AppError } from '../utils/errors/app.error.js';
 import { validationMedication } from '../utils/validations/medication.validation.js';
 
 export async function findMedications(req, res) {
     const { search, page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
-    try {
-        const result = await MedicationService.findMedications(
-            userId,
-            search,
-            page,
-            limit,
-        );
+    const result = await MedicationService.findMedications(
+        userId,
+        search,
+        page,
+        limit,
+    );
 
-        if (result.medications.length === 0) {
-            return res.status(404).json({
-                error: 'Nenhum medicamento encontrado',
-            });
-        }
-
-        res.json(result);
-    } catch (error) {
-        console.error('Erro ao buscar medicamentos:', error);
-        res.status(500).json({
-            error: 'Erro ao buscar medicamentos.',
-            details: error.message,
-        });
+    if (result.medications.length === 0) {
+        throw new AppError('Nenhum medicamento encontrado', 404);
     }
+
+    return res.json(result);
 }
 
 export async function getMedicationById(req, res) {
     const { medicationid } = req.params;
     const userId = req.user.userId;
 
-    try {
-        const medication = await MedicationService.getMedicationById(
-            userId,
-            medicationid,
-        );
+    const medication = await MedicationService.getMedicationById(
+        userId,
+        medicationid,
+    );
 
-        if (!medication) {
-            return res
-                .status(404)
-                .json({ error: 'Medicamento não encontrado' });
-        }
-
-        res.json(medication);
-    } catch (error) {
-        console.error('Erro ao buscar medicamento:', error);
-        res.status(500).json({
-            error: 'Erro ao buscar medicamento.',
-            details: error.message,
-        });
+    if (!medication) {
+        throw new AppError('Medicamento não encontrado', 404);
     }
+
+    return res.json(medication);
 }
 
 export async function getMedicationHistory(req, res) {
@@ -60,226 +43,100 @@ export async function getMedicationHistory(req, res) {
     const { startDate, endDate, status, page = 1, limit = 20 } = req.query;
     const userId = req.user.userId;
 
-    try {
-        const result = await MedicationService.getMedicationHistory(
-            userId,
-            medicationid,
-            { startDate, endDate, status, page, limit },
-        );
+    const result = await MedicationHistoryService.getMedicationHistory(
+        userId,
+        medicationid,
+        { startDate, endDate, status, page, limit },
+    );
 
-        res.json(result);
-    } catch (error) {
-        console.error('Erro ao buscar histórico:', error);
-
-        if (error.message === 'Medicamento não encontrado') {
-            return res.status(404).json({ error: error.message });
-        }
-
-        res.status(500).json({
-            error: 'Erro ao buscar o histórico do medicamento.',
-            details: error.message,
-        });
-    }
+    return res.json(result);
 }
 
 export async function createMedication(req, res) {
-    const { name, hourfirstdose, periodstart, periodend, intervalinhours } =
-        req.body;
     const userId = req.user.userId;
 
-    try {
-        const validationResult = validationMedication.medication({
-            name,
-            hourfirstdose,
-            periodstart,
-            periodend,
-            intervalinhours,
-        });
+    const validation = validationMedication.medication(req.body);
 
-        if (!validationResult.isValid) {
-            console.log('❌ Erros de validação:', validationResult.errors);
-            return res.status(400).json({
-                error: 'Dados inválidos',
-                details: validationResult.errors,
-            });
-        }
-
-        const newMedication = await MedicationService.createMedication(userId, {
-            name,
-            hourfirstdose,
-            periodstart,
-            periodend,
-            intervalinhours,
-        });
-
-        res.status(201).json(newMedication);
-    } catch (error) {
-        console.error('Erro ao criar medicamento:', error);
-
-        if (error.name === 'SequelizeValidationError') {
-            return res.status(400).json({
-                error: 'Erro de validação',
-                details: error.errors.map((e) => e.message),
-            });
-        }
-
-        res.status(500).json({
-            error: 'Erro ao criar medicamento.',
-            details: error.message,
-        });
+    if (!validation.isValid) {
+        throw new AppError('Dados inválidos', 400);
     }
+
+    const newMedication = await MedicationService.createMedication(
+        userId,
+        validation.normalized,
+    );
+
+    return res.status(201).json(newMedication);
 }
 
 export async function registerPendingConfirmation(req, res) {
     const { medicationid } = req.params;
     const userId = req.user.userId;
 
-    try {
-        const result = await MedicationService.registerPendingConfirmation(
-            userId,
-            medicationid,
-        );
+    const result = await MedicationDoseService.registerPendingConfirmation(
+        userId,
+        medicationid,
+    );
 
-        res.json(result);
-    } catch (error) {
-        console.error(`[REGISTER_PENDING] ERRO:`, error);
-
-        if (error.message === 'Medicamento não encontrado') {
-            return res.status(404).json({ error: error.message });
-        }
-
-        if (
-            error.message.includes('Esta dose já foi registrada hoje') ||
-            error.message.includes('Aguarde o intervalo mínimo') ||
-            error.message.includes('dose já está perdida')
-        ) {
-            return res.status(400).json({
-                error: error.message,
-                message: error.details?.message,
-                details: error.details,
-            });
-        }
-
-        res.status(500).json({ error: 'Erro ao registrar confirmação' });
-    }
+    return res.json(result);
 }
 
 export async function cancelPendingDose(req, res) {
     const { medicationid } = req.params;
     const userId = req.user.userId;
 
-    try {
-        const result = await MedicationService.cancelPendingDose(
-            userId,
-            medicationid,
-        );
+    const result = await MedicationDoseService.cancelPendingDose(
+        userId,
+        medicationid,
+    );
 
-        res.json(result);
-    } catch (error) {
-        console.error(`[CANCEL_PENDING] ERRO:`, error);
-
-        if (error.message === 'Medicamento não encontrado') {
-            return res.status(404).json({ error: error.message });
-        }
-
-        res.status(500).json({ error: 'Erro ao cancelar confirmação' });
-    }
+    return res.json(result);
 }
 
 export async function updateMedication(req, res) {
     const { medicationid } = req.params;
-    const { name, hournextdose, periodstart, periodend, intervalinhours } =
-        req.body;
     const userId = req.user.userId;
 
-    try {
-        const errors = [];
+    const validation = validationMedication.medication(req.body, true);
 
-        if (name) {
-            const nameValidation = validationMedication.name(name);
-            errors.push(...nameValidation.errors);
-        }
-
-        if (hournextdose) {
-            const timeValidation = validationMedication.time(hournextdose);
-            errors.push(...timeValidation.errors);
-        }
-
-        if (intervalinhours) {
-            const intervalValidation =
-                validationMedication.interval(intervalinhours);
-            errors.push(...intervalValidation.errors);
-        }
-
-        if (periodstart || periodend) {
-            const periodValidation = validationMedication.period(
-                periodstart,
-                periodend,
-            );
-            errors.push(...periodValidation.errors);
-        }
-
-        if (errors.length > 0) {
-            return res.status(400).json({
-                error: 'Dados inválidos',
-                details: errors,
-            });
-        }
-
-        const updatedMedication = await MedicationService.updateMedication(
-            userId,
-            medicationid,
-            { name, hournextdose, periodstart, periodend, intervalinhours },
+    if (!validation.isValid) {
+        logger.warn(
+            {
+                errors: validation.errors,
+                body: req.body,
+            },
+            'Validação de update falhou',
         );
-
-        if (!updatedMedication) {
-            return res
-                .status(404)
-                .json({ error: 'Medicamento não encontrado.' });
-        }
-
-        res.json(updatedMedication);
-    } catch (error) {
-        console.error('Erro ao atualizar medicamento:', error);
-
-        if (error.name === 'SequelizeValidationError') {
-            return res.status(400).json({
-                error: 'Erro de validação',
-                details: error.errors.map((e) => e.message),
-            });
-        }
-
-        res.status(500).json({
-            error: 'Erro ao atualizar medicamento.',
-            details: error.message,
-        });
+        throw new AppError('Dados inválidos', 400);
     }
+
+    const updatedMedication = await MedicationService.updateMedication(
+        userId,
+        medicationid,
+        validation.normalized,
+    );
+
+    if (!updatedMedication) {
+        throw new AppError('Medicamento não encontrado', 404);
+    }
+
+    return res.json(updatedMedication);
 }
 
 export async function deleteMedication(req, res) {
     const { medicationid } = req.params;
     const userId = req.user.userId;
 
-    try {
-        const result = await MedicationService.deleteMedication(
-            userId,
-            medicationid,
-        );
+    const result = await MedicationService.deleteMedication(
+        userId,
+        medicationid,
+    );
 
-        if (!result) {
-            return res
-                .status(404)
-                .json({ error: 'Medicamento não encontrado.' });
-        }
-
-        res.json({
-            message: `Medicamento ${result.medicationName} deletado com sucesso.`,
-        });
-    } catch (error) {
-        console.error('Erro ao deletar medicamento:', error);
-        res.status(500).json({
-            error: 'Erro ao deletar medicamento.',
-            details: error.message,
-        });
+    if (!result) {
+        throw new AppError('Medicamento não encontrado', 404);
     }
+
+    return res.json({
+        message: `Medicamento ${result.medicationName} deletado com sucesso.`,
+    });
 }

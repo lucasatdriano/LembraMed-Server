@@ -1,43 +1,26 @@
 import sequelize from './db.js';
+import { logger } from '../utils/logger.js';
 
 const syncDatabase = async () => {
+    logger.debug('Starting database synchronization');
+
     try {
-        console.log('🔄 [DEBUG SYNC] Iniciando sincronização do banco...');
+        await sequelize.sync({ force: false });
 
-        await sequelize
-            .sync({ force: false })
-            .then(() => {
-                console.log(
-                    '✅ [DEBUG SYNC] Modelos sincronizados com sucesso.',
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    '❌ [DEBUG SYNC] Erro ao sincronizar os modelos: ',
-                    error,
-                );
-                console.log(
-                    '🔍 [DEBUG SYNC] Tipo do erro:',
-                    error.constructor.name,
-                );
-                console.log(
-                    '🔍 [DEBUG SYNC] Mensagem completa:',
-                    error.message,
-                );
-
-                if (error.original) {
-                    console.log(
-                        '🔍 [DEBUG SYNC] Erro original:',
-                        error.original.message,
-                    );
-                }
-            });
+        logger.info('Database models synchronized successfully');
     } catch (error) {
-        console.error('❌ [DEBUG SYNC] Erro no bloco try-catch: ', error);
-        console.log('🔍 [DEBUG SYNC] Stack trace completo:', error.stack);
+        logger.error(
+            {
+                message: error.message,
+                stack: error.stack,
+                errorType: error.constructor?.name,
+                originalError: error.original?.message,
+            },
+            'Error while synchronizing database models',
+        );
     }
 };
 
-console.log('🔍 [DEBUG SYNC] Arquivo syncDatabase carregado');
+logger.debug('syncDatabase module loaded');
 
 export default syncDatabase;

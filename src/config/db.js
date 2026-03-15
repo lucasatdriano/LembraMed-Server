@@ -1,18 +1,28 @@
 import { Sequelize } from 'sequelize';
+import { logger } from '../utils/logger.js';
 
-console.log('🔍 [DEBUG DB] Variáveis de ambiente carregadas:');
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_NAME:', process.env.DB_NAME);
-console.log('DB_PORT:', process.env.DB_PORT);
-console.log('DB_DIALECT:', process.env.DB_DIALECT);
+logger.debug(
+    {
+        DB_HOST: process.env.DB_HOST,
+        DB_USER: process.env.DB_USER,
+        DB_NAME: process.env.DB_NAME,
+        DB_PORT: process.env.DB_PORT,
+        DB_DIALECT: process.env.DB_DIALECT,
+    },
+    'Variáveis de ambiente carregadas',
+);
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isUsingRenderDB =
     process.env.DB_HOST && process.env.DB_HOST.includes('render.com');
 
-console.log('isProduction:', isProduction);
-console.log('isUsingRenderDB:', isUsingRenderDB);
+logger.debug(
+    {
+        isProduction,
+        isUsingRenderDB,
+    },
+    'Database environment flags',
+);
 
 const sequelize = new Sequelize(
     process.env.DB_NAME,
@@ -23,7 +33,7 @@ const sequelize = new Sequelize(
         dialect: process.env.DB_DIALECT,
         port: process.env.DB_PORT,
         logging: (sql) => {
-            console.log('🔍 [DEBUG SQL]:', sql);
+            logger.debug({ sql }, 'SQL query executed');
         },
         dialectOptions:
             isProduction || isUsingRenderDB
@@ -39,16 +49,21 @@ const sequelize = new Sequelize(
     },
 );
 
-console.log('🔍 [DEBUG DB] Conexão Sequelize criada, testando autenticação...');
+logger.debug('Sequelize connection created, testing authentication');
 
 sequelize
     .authenticate()
     .then(() => {
-        console.log('✅ [DEBUG DB] Autenticação bem-sucedida!');
+        logger.info('Database authentication successful');
     })
     .catch((error) => {
-        console.error('❌ [DEBUG DB] Erro na autenticação:', error.message);
-        console.log('🔍 [DEBUG DB] Stack trace:', error.stack);
+        logger.error(
+            {
+                message: error.message,
+                stack: error.stack,
+            },
+            'Database authentication failed',
+        );
     });
 
 export default sequelize;

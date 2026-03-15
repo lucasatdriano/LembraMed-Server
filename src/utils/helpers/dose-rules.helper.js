@@ -1,10 +1,13 @@
+import { logger } from '../logger.js';
+
 export function calcularTolerancia(intervaloHoras) {
     const intervaloMinutos = intervaloHoras * 60;
-    // Tolerância = 25% do intervalo (1/4)
     const toleranciaMinutos = Math.floor(intervaloMinutos * 0.25);
 
-    console.log(`⏱️ Intervalo: ${intervaloHoras}h (${intervaloMinutos}min)`);
-    console.log(`⏱️ Tolerância: ${toleranciaMinutos}min (25% do intervalo)`);
+    logger.debug(
+        { intervaloHoras, toleranciaMinutos },
+        'Dose tolerance calculated',
+    );
     return toleranciaMinutos;
 }
 
@@ -54,7 +57,7 @@ export function verificarIntervaloMinimo(medication, agora) {
         `⏰ [VERIFICAR_INTERVALO] Minutos até poder tomar: ${Math.round(diffMinutosAtePermitido)}`,
     );
 
-    if (diffMinutosAtePermitido > 2 * 60) {
+    if (agora < proximoHorarioPermitido) {
         const horasRestantes = Math.floor(diffMinutosAtePermitido / 60);
         const minutosRestantes = Math.floor(diffMinutosAtePermitido % 60);
 

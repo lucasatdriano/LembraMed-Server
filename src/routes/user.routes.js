@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { asyncHandler } from '../utils/handlers/async-handler.js';
 import {
     register,
     loginMultiAccount,
@@ -9,9 +10,9 @@ import {
 
 const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', loginMultiAccount);
-router.get('/', authenticateToken, getUserById);
-router.post('/logout', authenticateToken, logoutAccount);
+router.post('/register', asyncHandler(register));
+router.post('/login', asyncHandler(loginMultiAccount));
+router.get('/', authenticateToken, asyncHandler(getUserById));
+router.post('/logout', authenticateToken, asyncHandler(logoutAccount));
 
 export default router;

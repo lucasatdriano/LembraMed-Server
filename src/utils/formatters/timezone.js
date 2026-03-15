@@ -16,16 +16,8 @@ export const timezone = {
      * @param {Date|number|string} [date] - Data opcional para converter
      * @returns {Date} Data no fuso brasileiro
      */
-    now(date = new Date()) {
-        if (date instanceof Date) {
-            return toZonedTime(date, TIMEZONE);
-        }
-
-        if (typeof date === 'number' || typeof date === 'string') {
-            return toZonedTime(new Date(date), TIMEZONE);
-        }
-
-        return toZonedTime(new Date(), TIMEZONE);
+    now(date = Date.now()) {
+        return toZonedTime(new Date(date), TIMEZONE);
     },
 
     /**
@@ -113,26 +105,6 @@ export const timezone = {
     },
 
     /**
-     * Obtém a próxima ocorrência de um horário (hoje ou amanhã)
-     * @param {string} horarioStr - Horário no formato HH:MM
-     * @param {Date} [dataReferencia] - Data de referência
-     * @returns {Date} Próxima ocorrência do horário
-     */
-    proximaOcorrenciaHorario(horarioStr, dataReferencia = null) {
-        const agora = dataReferencia ? this.now(dataReferencia) : this.now();
-        const horarioHoje = this.horaParaDate(horarioStr, agora);
-
-        // Se o horário de hoje ainda não passou, usa hoje
-        if (agora <= horarioHoje || this.isMesmoHorario(agora, horarioHoje)) {
-            return horarioHoje;
-        }
-
-        // Se já passou, usa amanhã
-        const horarioAmanha = this.horaParaDate(horarioStr, addDays(agora, 1));
-        return horarioAmanha;
-    },
-
-    /**
      * Verifica se duas datas têm o mesmo horário (ignora data)
      * @param {Date} data1 - Primeira data
      * @param {Date} data2 - Segunda data
@@ -140,48 +112,6 @@ export const timezone = {
      */
     isMesmoHorario(data1, data2) {
         return this.toTimeString(data1) === this.toTimeString(data2);
-    },
-
-    /**
-     * Calcula o próximo horário baseado no último horário e intervalo
-     * @param {string} ultimoHorario - Último horário no formato HH:MM
-     * @param {number} intervaloHoras - Intervalo em horas
-     * @param {Date} [dataReferencia] - Data de referência
-     * @returns {Date} Próxima data/hora
-     */
-    calcularProximoHorario(
-        ultimoHorario,
-        intervaloHoras,
-        dataReferencia = null,
-    ) {
-        const agora = dataReferencia ? new Date(dataReferencia) : this.now();
-
-        // Se o intervalo é múltiplo de 24h, mantém o mesmo horário
-        if (intervaloHoras >= 24 && intervaloHoras % 24 === 0) {
-            const diasParaAdicionar = intervaloHoras / 24;
-            const proximaOcorrencia = this.proximaOcorrenciaHorario(
-                ultimoHorario,
-                agora,
-            );
-
-            // Se a próxima ocorrência já passou, avança para o próximo ciclo
-            if (isAfter(agora, proximaOcorrencia)) {
-                return addDays(proximaOcorrencia, diasParaAdicionar);
-            }
-
-            return proximaOcorrencia;
-        }
-
-        // Para intervalos não múltiplos de 24h
-        const ultimaData = this.horaParaDate(ultimoHorario, agora);
-        let proximaData = addHours(ultimaData, intervaloHoras);
-
-        // Garante que a próxima data é no futuro
-        while (isBefore(proximaData, agora)) {
-            proximaData = addHours(proximaData, intervaloHoras);
-        }
-
-        return proximaData;
     },
 
     /**

@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { asyncHandler } from '../utils/handlers/async-handler.js';
 import {
     createContact,
     deleteContact,
@@ -11,10 +12,10 @@ import {
 const router = express.Router();
 router.use(authenticateToken);
 
-router.get('/search', findContacts);
-router.get('/:contactid', getContactById);
-router.post('/', createContact);
-router.put('/:contactid', updateContact);
-router.delete('/:contactid', deleteContact);
+router.get('/search', asyncHandler(findContacts));
+router.get('/:contactid', asyncHandler(getContactById));
+router.post('/', asyncHandler(createContact));
+router.put('/:contactid', asyncHandler(updateContact));
+router.delete('/:contactid', asyncHandler(deleteContact));
 
 export default router;

@@ -1,4 +1,4 @@
-import { models } from '../../models/index.js';
+import { UserRepository } from '../../repositories/user.repository.js';
 
 function generateBaseUsername(name) {
     return name
@@ -12,9 +12,7 @@ function generateBaseUsername(name) {
 export async function generateUniqueUsername(name) {
     const baseUsername = generateBaseUsername(name);
 
-    const existingUser = await models.User.findOne({
-        where: { username: baseUsername },
-    });
+    const existingUser = await UserRepository.findByUsername(baseUsername);
 
     if (existingUser) {
         return null;
