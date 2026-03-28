@@ -1,91 +1,119 @@
 import { MedicationRepository } from '../../repositories/medication.repository.js';
-import { timezone } from '../../utils/formatters/timezone.js';
-import { calcularTolerancia } from '../../utils/helpers/dose-rules.helper.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
+import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js';
 import { NotificationService } from '../notification/notification.service.js';
 import { logger } from '../../utils/logger.js';
 
 class MedicationNotificationScheduler {
     constructor() {
-        this.initialTracker = new Set();
-        this.reminderTracker = new Map();
-        this.missedTracker = new Set();
+        this.sentInitialNotifications = new Set();
+        this.reminderTimestamps = new Map();
+        this.sentMissedNotifications = new Set();
+        this.sentExpiredNotifications = new Map();
+        this.reminderWindowEnded = new Set();
     }
 
     async checkMedicationNotifications() {
         try {
-            const agora = timezone.now();
+            const now = dateTime.now();
 
             logger.info('[NOTIFICATION_SCHEDULER] Checking medications');
 
             const medications =
-                await MedicationRepository.findAllForNotification();
+                await MedicationRepository.findForNotification();
 
             for (const medication of medications) {
-                await this.processMedication(medication, agora);
+                await this.processMedication(medication, now);
             }
+
+            await this.checkExpiredMedications();
         } catch (error) {
             logger.error(error, 'Error checking medication notifications');
         }
     }
 
-    async processMedication(medication, agora) {
+    async processMedication(medication, now) {
         try {
-            const doseTime = this.getDoseTime(medication, agora);
+            const doseDateTime = this.buildDoseDateTime(medication, now);
 
-            const toleranciaMinutos = calcularTolerancia(
+            const toleranceInMinutes = calculateDoseTolerance(
                 medication.doseinterval.intervalinhours,
             );
 
-            const diffMinutos =
-                (agora.getTime() - doseTime.getTime()) / (60 * 1000);
+            const diffInMinutes = this.calculateTimeDifferenceInMinutes(
+                now,
+                doseDateTime,
+            );
 
-            if (this.isInitialDose(diffMinutos)) {
-                await this.handleInitial(medication, doseTime);
-                return;
+            if (this.isInitialDose(diffInMinutes)) {
+                return this.handleInitialNotification(medication, doseDateTime);
             }
 
-            if (this.isReminder(diffMinutos, toleranciaMinutos)) {
-                await this.handleReminder(medication, agora);
-                return;
+            if (this.isReminderWindow(diffInMinutes, toleranceInMinutes)) {
+                return this.handleReminderNotification(
+                    medication,
+                    now,
+                    diffInMinutes,
+                );
             }
 
-            if (this.isMissed(diffMinutos, toleranciaMinutos)) {
-                await this.handleMissed(medication, doseTime);
-                return;
+            if (this.isMissedDose(diffInMinutes, toleranceInMinutes)) {
+                return this.handleMissedNotification(medication, doseDateTime);
             }
         } catch (error) {
             logger.error(
-                { medicationId: medication.id },
+                {
+                    error,
+                    medicationId: medication.id,
+                },
                 'Error processing medication',
             );
         }
     }
 
-    getDoseTime(medication, agora) {
-        const [horas, minutos] = medication.hournextdose.split(':').map(Number);
+    buildDoseDateTime(medication, now) {
+        const [hours, minutes] = medication.hournextdose.split(':').map(Number);
 
-        const dose = new Date(agora);
-        dose.setHours(horas, minutos, 0, 0);
+        const doseDate = new Date(now);
+        doseDate.setHours(hours, minutes, 0, 0);
 
-        return dose;
+        return doseDate;
     }
 
-    isInitialDose(diffMinutos) {
-        return Math.abs(diffMinutos) < 1;
+    calculateTimeDifferenceInMinutes(current, target) {
+        return (current.getTime() - target.getTime()) / (60 * 1000);
     }
 
-    isReminder(diffMinutos, tolerancia) {
-        return diffMinutos > 0 && diffMinutos <= tolerancia;
+    isInitialDose(diffInMinutes) {
+        return diffInMinutes >= -1 && diffInMinutes <= 0;
     }
 
-    isMissed(diffMinutos, tolerancia) {
-        return diffMinutos > tolerancia;
+    isReminderWindow(diffInMinutes, toleranceInMinutes) {
+        const reminderLimit = Math.min(30, toleranceInMinutes);
+
+        return diffInMinutes > 0 && diffInMinutes <= reminderLimit;
     }
 
-    async handleInitial(medication, doseTime) {
-        const key = `${medication.userid}-${medication.id}-${doseTime.toISOString()}`;
+    isMissedDose(diffInMinutes, toleranceInMinutes) {
+        return diffInMinutes > toleranceInMinutes;
+    }
 
-        if (this.initialTracker.has(key)) return;
+    generateDoseKey(medication, doseDateTime) {
+        return `${medication.userid}-${medication.id}-${doseDateTime.toISOString()}`;
+    }
+
+    generateReminderKey(medication) {
+        return `${medication.userid}-${medication.id}`;
+    }
+
+    generateExpiredKey(medication) {
+        return `${medication.userid}-${medication.id}`;
+    }
+
+    async handleInitialNotification(medication, doseDateTime) {
+        const key = this.generateDoseKey(medication, doseDateTime);
+
+        if (this.sentInitialNotifications.has(key)) return;
 
         await NotificationService.sendMedicationReminder(
             medication.userid,
@@ -95,15 +123,33 @@ class MedicationNotificationScheduler {
             'initial',
         );
 
-        this.initialTracker.add(key);
+        this.sentInitialNotifications.add(key);
+
+        setTimeout(
+            () => {
+                this.sentInitialNotifications.delete(key);
+            },
+            24 * 60 * 60 * 1000,
+        );
     }
 
-    async handleReminder(medication, agora) {
-        const key = `${medication.userid}-${medication.id}`;
-        const lastReminder = this.reminderTracker.get(key);
+    async handleReminderNotification(medication, now, diffInMinutes) {
+        const key = this.generateReminderKey(medication);
+
+        if (diffInMinutes > 30) {
+            this.reminderWindowEnded.add(key);
+            return;
+        }
+
+        if (this.reminderWindowEnded.has(key)) {
+            return;
+        }
+
+        const lastSentAt = this.reminderTimestamps.get(key);
+        const FIVE_MINUTES = 5 * 60 * 1000;
 
         const shouldSend =
-            !lastReminder || agora.getTime() - lastReminder >= 5 * 60 * 1000;
+            !lastSentAt || now.getTime() - lastSentAt >= FIVE_MINUTES;
 
         if (!shouldSend) return;
 
@@ -115,13 +161,17 @@ class MedicationNotificationScheduler {
             'reminder',
         );
 
-        this.reminderTracker.set(key, agora.getTime());
+        this.reminderTimestamps.set(key, now.getTime());
+
+        if (diffInMinutes >= 30) {
+            this.reminderWindowEnded.add(key);
+        }
     }
 
-    async handleMissed(medication, doseTime) {
-        const key = `${medication.userid}-${medication.id}-${doseTime.toISOString()}`;
+    async handleMissedNotification(medication, doseDateTime) {
+        const key = this.generateDoseKey(medication, doseDateTime);
 
-        if (this.missedTracker.has(key)) return;
+        if (this.sentMissedNotifications.has(key)) return;
 
         await NotificationService.sendMedicationReminder(
             medication.userid,
@@ -131,42 +181,70 @@ class MedicationNotificationScheduler {
             'missed',
         );
 
-        this.missedTracker.add(key);
+        this.sentMissedNotifications.add(key);
+
+        setTimeout(
+            () => {
+                this.sentMissedNotifications.delete(key);
+            },
+            24 * 60 * 60 * 1000,
+        );
+
+        const reminderKey = this.generateReminderKey(medication);
+        this.reminderTimestamps.delete(reminderKey);
+        this.reminderWindowEnded.delete(reminderKey);
     }
 
     async checkExpiredMedications() {
         try {
-            const agora = timezone.now();
+            const now = dateTime.now();
 
-            const expired =
-                await MedicationRepository.findExpiredMedications(agora);
+            const expiredMedications =
+                await MedicationRepository.findExpiredForNotification(now);
 
-            for (const med of expired) {
-                await NotificationService.sendNotification(
-                    med.userid,
-                    'Medicamento Expirado',
-                    `O período de uso de ${med.name} terminou.`,
-                    `med-expired-${med.id}`,
+            for (const medication of expiredMedications) {
+                const key = this.generateExpiredKey(medication);
+                const lastSent = this.sentExpiredNotifications.get(key);
+
+                if (
+                    lastSent &&
+                    now.getTime() - lastSent < 24 * 60 * 60 * 1000
+                ) {
+                    continue;
+                }
+
+                await NotificationService.sendMedicationReminder(
+                    medication.userid,
+                    medication.id,
+                    medication.name,
+                    medication.hournextdose,
+                    'expired',
                 );
 
-                await MedicationRepository.deleteById(med.id);
+                this.sentExpiredNotifications.set(key, now.getTime());
             }
-
-            logger.info(
-                { count: expired.length },
-                'Expired medications processed',
-            );
         } catch (error) {
             logger.error(error, 'Error checking expired medications');
         }
     }
 
     cleanup() {
-        const limit = Date.now() - 24 * 60 * 60 * 1000;
+        const ONE_DAY = 24 * 60 * 60 * 1000;
+        const expirationLimit = Date.now() - ONE_DAY;
 
-        for (const [key, timestamp] of this.reminderTracker.entries()) {
-            if (timestamp < limit) {
-                this.reminderTracker.delete(key);
+        for (const [key, timestamp] of this.reminderTimestamps.entries()) {
+            if (timestamp < expirationLimit) {
+                this.reminderTimestamps.delete(key);
+                this.reminderWindowEnded.delete(key);
+            }
+        }
+
+        for (const [
+            key,
+            timestamp,
+        ] of this.sentExpiredNotifications.entries()) {
+            if (timestamp < expirationLimit) {
+                this.sentExpiredNotifications.delete(key);
             }
         }
     }

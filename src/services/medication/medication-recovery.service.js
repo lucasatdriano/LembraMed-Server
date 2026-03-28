@@ -1,27 +1,34 @@
-import { MedicationRepository } from '../../repositories/medication.repository.js';
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
+import { MedicationRepository } from '../../repositories/medication.repository.js';
 
 export class MedicationRecoveryService {
-    static async recalculateMissedDoses(agora) {
+    static async recalculateMissedDoses(now) {
         const medications = await MedicationRepository.findActive();
 
-        for (const med of medications) {
+        for (const medication of medications) {
             const lastHistory = await MedicationHistoryRepository.findLast(
-                med.id,
+                medication.id,
             );
 
             if (!lastHistory) continue;
 
-            const lastDate = new Date(lastHistory.takendate);
+            const intervalMs =
+                medication.doseinterval.intervalinhours * 60 * 60 * 1000;
 
-            const interval = med.doseinterval.intervalinhours * 60 * 60 * 1000;
+            if (intervalMs <= 0) continue;
 
-            let next = new Date(lastDate.getTime() + interval);
+            let next = new Date(lastHistory.takendate).getTime() + intervalMs;
 
-            while (next < agora) {
-                await MedicationHistoryRepository.createMissed(med.id, next);
+            let safety = 0;
 
-                next = new Date(next.getTime() + interval);
+            while (next < now.getTime() && safety < 1000) {
+                await MedicationHistoryRepository.createMissed(
+                    medication.id,
+                    new Date(next),
+                );
+
+                next += intervalMs;
+                safety++;
             }
         }
     }

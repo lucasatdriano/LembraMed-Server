@@ -1,5 +1,5 @@
 import { TokenService } from '../auth/token.service.js';
-import { timezone } from '../../utils/formatters/timezone.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
 import { AppError } from '../../utils/errors/app.error.js';
 import { DeviceRepository } from '../../repositories/device.repository.js';
 import { PushSubscriptionRepository } from '../../repositories/push-subscription.repository.js';
@@ -31,7 +31,7 @@ export class DeviceService {
                 endpoint: subscription.endpoint,
                 p256dh: subscription.keys.p256dh,
                 auth: subscription.keys.auth,
-                lastused: timezone.now(),
+                lastused: dateTime.now(),
             });
 
         return { subscriptionId: pushSub.id };

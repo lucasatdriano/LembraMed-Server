@@ -2,15 +2,18 @@ import { MedicationRepository } from '../../repositories/medication.repository.j
 import { logger } from '../../utils/logger.js';
 
 export class MedicationExpirationService {
-    static async deleteExpiredMedications(agora) {
-        const expired = await MedicationRepository.findExpired(agora);
+    static async deleteExpiredMedications(now) {
+        const expired = await MedicationRepository.findExpired(now);
 
         if (!expired.length) return;
 
-        for (const med of expired) {
-            await MedicationRepository.delete(med.id);
+        for (const medication of expired) {
+            await MedicationRepository.deleteById(medication.id);
 
-            logger.info({ medicationId: med.id }, 'Expired medication deleted');
+            logger.info(
+                { medicationId: medication.id },
+                'Expired medication deleted',
+            );
         }
     }
 }

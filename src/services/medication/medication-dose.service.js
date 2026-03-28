@@ -1,17 +1,78 @@
 import { MedicationRepository } from '../../repositories/medication.repository.js';
-import { timezone } from '../../utils/formatters/timezone.js';
-import {
-    calcularTolerancia,
-    verificarIntervaloMinimo,
-} from '../../utils/helpers/dose-rules.helper.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
+import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js';
 import { AppError } from '../../utils/errors/app.error.js';
 import { logger } from '../../utils/logger.js';
+import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
+import { recalculateNextDoseTime } from '../../utils/helpers/recalculate-next-dose.helper.js';
 
 export class MedicationDoseService {
-    static async registerPendingConfirmation(userId, medicationId) {
-        logger.info({ medicationId, userId }, 'REGISTER_PENDING start');
+    static async confirmDose(medication, taken = true) {
+        if (!medication.status) {
+            throw new AppError(
+                'Este medicamento já foi finalizado e está disponível apenas para consulta.',
+                400,
+            );
+        }
 
-        const agora = timezone.now();
+        const now = dateTime.now();
+
+        try {
+            const nextDoseDate = MedicationRepository.getNextDoseDate(
+                medication,
+                now,
+            );
+
+            const recent =
+                await MedicationHistoryRepository.findRecentByMedication(
+                    medication.id,
+                    5,
+                );
+
+            if (recent) {
+                logger.warn(
+                    { medicationId: medication.id },
+                    'Recent history already exists, skipping duplicate',
+                );
+                return;
+            }
+
+            await MedicationHistoryRepository.create({
+                medicationid: medication.id,
+                takendate: nextDoseDate,
+                taken,
+            });
+
+            const takenTime = dateTime.toTimeString(now);
+
+            const nextDoseTime = recalculateNextDoseTime(
+                medication.hournextdose,
+                medication.doseinterval.intervalinhours,
+                now,
+            );
+
+            await MedicationRepository.update(medication, {
+                pendingconfirmation: false,
+                pendinguntil: null,
+                lasttakentime: taken ? takenTime : null,
+                hournextdose: nextDoseTime,
+            });
+
+            logger.info(
+                { medicationId: medication.id },
+                'CONFIRM_DOSE success',
+            );
+        } catch (error) {
+            logger.error(
+                { error, medicationId: medication.id },
+                'CONFIRM_DOSE error',
+            );
+            throw error;
+        }
+    }
+
+    static async registerPendingConfirmation(userId, medicationId) {
+        const now = dateTime.now();
 
         const medication = await MedicationRepository.findOne({
             where: { id: medicationId, userid: userId },
@@ -22,62 +83,78 @@ export class MedicationDoseService {
             throw new AppError('Medicamento não encontrado', 404);
         }
 
-        const intervaloHoras = medication.doseinterval.intervalinhoras;
+        if (!medication.status) {
+            throw new AppError(
+                'Este medicamento já foi finalizado e está disponível apenas para consulta.',
+                400,
+            );
+        }
 
-        const doseAtual = this.determinarDoseAtual(medication, agora);
+        const intervalInHours = medication.doseinterval.intervalinhours;
 
-        const toleranciaMinutos = calcularTolerancia(intervaloHoras);
-        logger.debug(
-            { medicationId, intervaloHoras, toleranciaMinutos },
-            'Tolerance minutes calculated',
-        );
+        const today = dateTime.timeStringToDate(medication.hournextdose, now);
 
-        const diffMinutos = (agora - doseAtual) / (60 * 1000);
+        const currentDose = now.getTime() < today.getTime() ? today : today;
 
-        if (diffMinutos > toleranciaMinutos) {
+        const diffHours =
+            (currentDose.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        if (diffHours > 2) {
+            throw new AppError(
+                'Você só pode marcar a dose até 2 horas antes.',
+                400,
+            );
+        }
+
+        const toleranceInMinutes = calculateDoseTolerance(intervalInHours);
+
+        const diffMinutes =
+            (now.getTime() - currentDose.getTime()) / (60 * 1000);
+
+        if (diffMinutes > toleranceInMinutes) {
             throw new AppError('Esta dose já está perdida', 400);
         }
 
-        const validacaoIntervalo = verificarIntervaloMinimo(medication, agora);
+        const lastDose = await MedicationHistoryRepository.findLast(
+            medication.id,
+        );
 
-        if (!validacaoIntervalo.valido) {
-            throw new AppError(validacaoIntervalo.mensagem, 400);
+        if (lastDose) {
+            const intervalMs = intervalInHours * 60 * 60 * 1000;
+
+            const nextAllowed =
+                new Date(lastDose.takendate).getTime() + intervalMs;
+
+            const toleranceBeforeMs = 2 * 60 * 60 * 1000; // 👈 AQUI
+
+            if (now.getTime() < nextAllowed - toleranceBeforeMs) {
+                const diffMs = nextAllowed - toleranceBeforeMs - now.getTime();
+
+                const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                const minutes = Math.floor(
+                    (diffMs % (1000 * 60 * 60)) / (1000 * 60),
+                );
+
+                throw new AppError(
+                    `Você poderá marcar em ${hours}h ${minutes}min.`,
+                    400,
+                );
+            }
         }
 
-        const pendingUntilTimestamp = agora.getTime() + 3 * 60 * 1000;
-        const pendingUntilDate = new Date(pendingUntilTimestamp);
+        const base =
+            now.getTime() < currentDose.getTime()
+                ? currentDose.getTime()
+                : now.getTime();
 
-        logger.debug(
-            {
-                medicationId,
-                pendingUntil: pendingUntilTimestamp,
-                pendingUntilFormatted: pendingUntilDate.toLocaleString(
-                    'pt-BR',
-                    {
-                        timeZone: 'America/Sao_Paulo',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                    },
-                ),
-            },
-            'Pending until timestamp calculated',
-        );
+        const pendingUntil = base + 3 * 60 * 1000;
 
         await MedicationRepository.update(medication, {
-            status: true,
             pendingconfirmation: true,
-            pendinguntil: pendingUntilTimestamp,
+            pendinguntil: pendingUntil,
         });
-        logger.info(
-            { medicationId, pendingUntil: pendingUntilTimestamp },
-            'Medication updated successfully',
-        );
 
-        const dataExpiracao = pendingUntilDate.toLocaleString('pt-BR', {
+        const formatted = new Date(pendingUntil).toLocaleString('pt-BR', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -85,15 +162,12 @@ export class MedicationDoseService {
             minute: '2-digit',
         });
 
-        const response = {
-            message: `Dose registrada. Aguardando confirmação até ${dataExpiracao}.`,
-            pendingUntil: pendingUntilTimestamp,
-            pendingUntilFormatted: dataExpiracao,
+        return {
+            message: `Dose registrada até ${formatted}`,
+            pendingUntil,
+            pendingUntilFormatted: formatted,
             expiresIn: '3 minutos',
         };
-
-        logger.info({ medicationId, response }, 'REGISTER_PENDING success');
-        return response;
     }
 
     static async cancelPendingDose(userId, medicationId) {
@@ -106,34 +180,10 @@ export class MedicationDoseService {
         }
 
         await MedicationRepository.update(medication, {
-            status: false,
             pendingconfirmation: false,
             pendinguntil: null,
         });
 
         return { message: 'Confirmação cancelada' };
-    }
-
-    static determinarDoseAtual(medication, agora) {
-        const [horas, minutos] = medication.hournextdose.split(':').map(Number);
-
-        const isNewMedication =
-            !medication.lastdosetime || medication.status === false;
-
-        if (isNewMedication) {
-            const primeiraDose = new Date(agora);
-            primeiraDose.setHours(horas, minutos, 0, 0);
-
-            return primeiraDose;
-        }
-
-        const doseHoje = new Date(agora);
-        doseHoje.setHours(horas, minutos, 0, 0);
-
-        const doseOntem = new Date(agora);
-        doseOntem.setDate(doseOntem.getDate() - 1);
-        doseOntem.setHours(horas, minutos, 0, 0);
-
-        return agora < doseHoje ? doseOntem : doseHoje;
     }
 }

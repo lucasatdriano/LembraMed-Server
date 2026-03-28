@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { UserRepository } from '../../repositories/user.repository.js';
 import { TokenService } from './token.service.js';
 import { AppError } from '../../utils/errors/app.error.js';
+import emailService from './email.service.js';
 
 export class AuthService {
     static async sendPasswordResetEmail(email) {
@@ -34,19 +35,7 @@ export class AuthService {
     }
 
     static async sendEmail(to, resetURL) {
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to,
-            subject: 'Redefinição de Senha',
-            html: `
-                <h1>LembraMed</h1>
-                <p>Para redefinir sua senha, clique no link abaixo:</p>
-                <a href="${resetURL}">${resetURL}</a>
-                <p>Se não foi você que solicitou a recuperação de senha, ignore este e-mail.</p>
-            `,
-        };
-
-        await transporter.sendMail(mailOptions);
+        await emailService.sendPasswordResetEmail(to, resetURL);
     }
 
     static async resetPassword(token, newPassword) {
@@ -55,7 +44,7 @@ export class AuthService {
         try {
             decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
-            throw new AppError('Token inválido ou expirado', 401);
+            throw new AppError('Token inválido ou expirado', 401, error);
         }
 
         const user = await UserRepository.findById(decoded.id);

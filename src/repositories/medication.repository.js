@@ -2,6 +2,10 @@ import { Op } from 'sequelize';
 import { models } from '../models/index.js';
 
 export class MedicationRepository {
+    static findAll(options) {
+        return models.Medication.findAll(options);
+    }
+
     static findAndCountAll(options) {
         return models.Medication.findAndCountAll(options);
     }
@@ -14,35 +18,10 @@ export class MedicationRepository {
         return models.Medication.findByPk(id, options);
     }
 
-    static findExpired(agora) {
-        const startOfDay = new Date(agora);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        return models.Medication.findAll({
-            where: {
-                periodend: {
-                    [Op.ne]: null,
-                    [Op.lt]: startOfDay,
-                },
-            },
-        });
-    }
-
-    static findExpiredPending(agora) {
-        return models.Medication.findAll({
-            where: {
-                pendingconfirmation: true,
-                pendinguntil: {
-                    [Op.lte]: agora,
-                },
-            },
-            include: ['doseinterval'],
-        });
-    }
-
     static findActive() {
         return models.Medication.findAll({
             where: {
+                status: true,
                 pendingconfirmation: false,
                 hournextdose: { [Op.ne]: null },
             },
@@ -50,9 +29,10 @@ export class MedicationRepository {
         });
     }
 
-    static findAllForNotification() {
+    static findForNotification() {
         return models.Medication.findAll({
             where: {
+                status: true,
                 pendingconfirmation: false,
             },
             include: [
@@ -65,8 +45,25 @@ export class MedicationRepository {
         });
     }
 
-    static findExpiredMedications(agora) {
-        const startOfDay = new Date(agora);
+    static findExpired(now) {
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const deleteAfter = new Date(startOfDay);
+        deleteAfter.setDate(deleteAfter.getDate() - 1);
+
+        return models.Medication.findAll({
+            where: {
+                periodend: {
+                    [Op.ne]: null,
+                    [Op.lt]: deleteAfter,
+                },
+            },
+        });
+    }
+
+    static findExpiredForNotification(now) {
+        const startOfDay = new Date(now);
         startOfDay.setHours(0, 0, 0, 0);
 
         return models.Medication.findAll({
@@ -79,25 +76,38 @@ export class MedicationRepository {
         });
     }
 
-    static getNextDoseDate(medication, agora) {
-        const [hora, minuto] = medication.hournextdose.split(':').map(Number);
+    static findExpiredPending(now) {
+        return models.Medication.findAll({
+            where: {
+                pendingconfirmation: true,
+                pendinguntil: {
+                    [Op.lte]: now,
+                },
+            },
+            include: ['doseinterval'],
+        });
+    }
 
-        const dose = new Date(agora);
+    static getNextDoseDate(medication, now) {
+        if (!medication.hournextdose) return null;
 
-        dose.setHours(hora, minuto, 0, 0);
+        const [hours, minutes] = medication.hournextdose.split(':').map(Number);
 
-        return dose;
+        const doseDate = new Date(now);
+        doseDate.setHours(hours, minutes, 0, 0);
+
+        return doseDate;
     }
 
     static create(data) {
         return models.Medication.create(data);
     }
 
-    static async update(instance, data) {
+    static update(instance, data) {
         return instance.update(data);
     }
 
-    static async delete(instance) {
+    static delete(instance) {
         return instance.destroy();
     }
 

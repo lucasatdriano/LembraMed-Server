@@ -17,7 +17,7 @@ export async function registerPushSubscription(req, res) {
 
     if (!userid || !deviceid || !subscription) {
         throw new AppError(
-            'UserID, deviceId e subscription são obrigatórios',
+            'UserId, deviceId e subscription são obrigatórios',
             400,
         );
     }

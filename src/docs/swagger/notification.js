@@ -9,6 +9,28 @@
  * @swagger
  * components:
  *   schemas:
+ *     PushSubscription:
+ *       type: object
+ *       properties:
+ *         endpoint:
+ *           type: string
+ *           example: "https://fcm.googleapis.com/fcm/send/abc123"
+ *         deviceId:
+ *           type: string
+ *           example: "device-xyz"
+ *         keys:
+ *           type: object
+ *           properties:
+ *             p256dh:
+ *               type: string
+ *               example: "BNcRdre..."
+ *             auth:
+ *               type: string
+ *               example: "abc123"
+ *       required:
+ *         - endpoint
+ *         - keys
+ *
  *     SendNotificationRequest:
  *       type: object
  *       properties:
@@ -30,21 +52,12 @@
  *         success:
  *           type: boolean
  *           example: true
+ *         notificationId:
+ *           type: string
+ *           format: uuid
  *         message:
  *           type: string
  *           example: "Notificação enviada para 2 dispositivos"
- *         details:
- *           type: object
- *           properties:
- *             total:
- *               type: number
- *               example: 3
- *             successful:
- *               type: number
- *               example: 2
- *             failed:
- *               type: number
- *               example: 1
  *
  *     Notification:
  *       type: object
@@ -59,6 +72,7 @@
  *           type: string
  *         message:
  *           type: string
+ *           nullable: true
  *         sentat:
  *           type: string
  *           format: date-time
@@ -81,10 +95,100 @@
 
 /**
  * @swagger
+ * /notifications/vapid-public-key:
+ *   get:
+ *     summary: Retorna a chave pública VAPID
+ *     tags: [Notifications]
+ *     responses:
+ *       200:
+ *         description: Chave retornada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 publicKey:
+ *                   type: string
+ *       500:
+ *         description: VAPID não configurado
+ */
+
+/**
+ * @swagger
+ * /notifications/subscribe:
+ *   post:
+ *     summary: Registra uma subscription de push
+ *     tags: [Notifications]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PushSubscription'
+ *     responses:
+ *       200:
+ *         description: Subscription registrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription realizado com sucesso"
+ *       400:
+ *         description: Dados inválidos
+ */
+
+/**
+ * @swagger
+ * /notifications/unsubscribe:
+ *   post:
+ *     summary: Remove uma subscription
+ *     tags: [Notifications]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               endpoint:
+ *                 type: string
+ *                 example: "https://fcm.googleapis.com/fcm/send/abc123"
+ *             required:
+ *               - endpoint
+ *     responses:
+ *       200:
+ *         description: Subscription removida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription removido com sucesso"
+ *       400:
+ *         description: Endpoint não informado
+ */
+
+/**
+ * @swagger
  * /notifications/send:
  *   post:
- *     summary: Envia notificação push para o usuário autenticado
- *     description: Envia notificação para todos os dispositivos registrados do usuário autenticado
+ *     summary: Envia notificação push
+ *     description: Envia para todos dispositivos do usuário autenticado
  *     tags: [Notifications]
  *     security:
  *       - BearerAuth: []
@@ -96,25 +200,22 @@
  *             $ref: '#/components/schemas/SendNotificationRequest'
  *     responses:
  *       200:
- *         description: Notificação enviada com sucesso
+ *         description: Notificação enviada
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SendNotificationResponse'
  *       400:
- *         description: Title é obrigatório
- *       404:
- *         description: Nenhuma subscription encontrada para este usuário
+ *         description: Título obrigatório
  *       500:
- *         description: Erro interno do servidor
+ *         description: Erro interno
  */
 
 /**
  * @swagger
  * /notifications:
  *   get:
- *     summary: Obtém notificações do usuário autenticado
- *     description: Retorna a lista de notificações do usuário autenticado
+ *     summary: Lista notificações do usuário
  *     tags: [Notifications]
  *     security:
  *       - BearerAuth: []
@@ -123,48 +224,39 @@
  *         name: limit
  *         schema:
  *           type: integer
- *           minimum: 1
- *           maximum: 100
  *           default: 50
- *         description: Número máximo de notificações a retornar
  *       - in: query
  *         name: offset
  *         schema:
  *           type: integer
- *           minimum: 0
  *           default: 0
- *         description: Número de notificações a pular (para paginação)
  *     responses:
  *       200:
- *         description: Notificações retornadas com sucesso
+ *         description: Lista de notificações
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/NotificationsResponse'
- *       500:
- *         description: Erro interno do servidor
  */
 
 /**
  * @swagger
  * /notifications/{notificationid}/read:
  *   patch:
- *     summary: Marca uma notificação como lida
- *     description: Atualiza a data de leitura de uma notificação específica do usuário autenticado
+ *     summary: Marca notificação como lida
  *     tags: [Notifications]
  *     security:
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: notificationid
+ *         name: notificationId
  *         required: true
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID da notificação
  *     responses:
  *       200:
- *         description: Notificação marcada como lida com sucesso
+ *         description: Marcado como lido
  *         content:
  *           application/json:
  *             schema:
@@ -178,6 +270,4 @@
  *                   example: "Notificação marcada como lida"
  *       404:
  *         description: Notificação não encontrada
- *       500:
- *         description: Erro interno do servidor
  */

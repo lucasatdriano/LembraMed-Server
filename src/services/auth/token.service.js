@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
-import { timezone } from '../../utils/formatters/timezone.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
 import { refreshTokenRepository } from '../../repositories/refresh-token.repository.js';
 import { AppError } from '../../utils/errors/app.error.js';
 
@@ -30,7 +30,7 @@ export class TokenService {
             token: refreshToken,
             userid: userId,
             deviceid: deviceId,
-            expiresat: timezone.now(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            expiresat: dateTime.now(Date.now() + 7 * 24 * 60 * 60 * 1000),
         });
 
         return {
@@ -46,7 +46,7 @@ export class TokenService {
                 token: oldRefreshToken,
                 deviceid: deviceId,
                 revoked: false,
-                expiresat: { [Op.gt]: timezone.now() },
+                expiresat: { [Op.gt]: dateTime.now() },
             },
         });
 
@@ -64,7 +64,7 @@ export class TokenService {
         } catch (error) {
             await this.revokeAllUserTokens(null, deviceId);
 
-            throw new AppError('Token inválido ou expirado', 401);
+            throw new AppError('Token inválido ou expirado', 401, error);
         }
 
         await storedToken.update({ revoked: true });
@@ -98,7 +98,7 @@ export class TokenService {
     }
 
     static async cleanupExpiredTokens() {
-        await refreshTokenRepository.deleteRefreshToken(timezone.now());
+        await refreshTokenRepository.deleteRefreshToken(dateTime.now());
     }
 
     static async isValidRefreshToken(token, deviceId) {
@@ -107,7 +107,7 @@ export class TokenService {
                 token,
                 deviceid: deviceId,
                 revoked: false,
-                expiresat: { [Op.gt]: timezone.now() },
+                expiresat: { [Op.gt]: dateTime.now() },
             },
         });
 

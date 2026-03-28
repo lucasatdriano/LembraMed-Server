@@ -158,7 +158,7 @@
 
 /**
  * @swagger
- * /users/me:
+ * /users:
  *   get:
  *     summary: Obtém os detalhes do usuário autenticado
  *     description: Retorna informações do usuário autenticado com base no token JWT.

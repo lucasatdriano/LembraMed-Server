@@ -68,7 +68,7 @@
 
 /**
  * @swagger
- * /auth/forgotpassword:
+ * /auth/forgot-password:
  *   post:
  *     summary: Solicitar redefinição de senha
  *     description: Envia um e-mail com um link para redefinir a senha do usuário.
@@ -90,7 +90,7 @@
 
 /**
  * @swagger
- * /auth/resetpassword:
+ * /auth/reset-password:
  *   put:
  *     summary: Redefinir senha
  *     description: Permite ao usuário redefinir sua senha usando um token válido. Revoga todos os tokens existentes do usuário por segurança.
@@ -156,7 +156,7 @@
 
 /**
  * @swagger
- * /auth/refreshtoken:
+ * /auth/refresh-token:
  *   post:
  *     summary: Atualiza os tokens de acesso usando refresh token (Token Rotation)
  *     description: Gera um novo access token E um novo refresh token usando o refresh token fornecido. O refresh token antigo é revogado automaticamente.

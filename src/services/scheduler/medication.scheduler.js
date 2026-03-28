@@ -1,54 +1,67 @@
 import cron from 'node-cron';
-import { timezone } from '../../utils/formatters/timezone.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
 
+import { MedicationRecoveryService } from '../medication/medication-recovery.service.js';
+import { MedicationStatusService } from '../medication/medication-status.service.js';
+import { MedicationExpirationService } from '../medication/medication-expiration.service.js';
 import { MedicationMissedDoseService } from '../medication/medication-missed-dose.service.js';
 import { MedicationPendingDoseService } from '../medication/medication-pending-dose.service.js';
-import { MedicationExpirationService } from '../medication/medication-expiration.service.js';
-import { MedicationRecoveryService } from '../medication/medication-recovery.service.js';
 import medicationNotificationScheduler from './medication-notification.scheduler.js';
 
 import { logger } from '../../utils/logger.js';
 
 class MedicationScheduler {
     constructor() {
-        this.initialized = false;
+        this.isInitialized = false;
         this.executionCount = 0;
         this.timeZone = 'America/Sao_Paulo';
     }
 
     init() {
-        if (this.initialized) return;
+        if (this.isInitialized) return;
 
         logger.info(
-            { timezone: this.timeZone },
+            { dateTime: this.timeZone },
             'Medication scheduler starting',
         );
 
+        this.runInitialRecovery();
+
+        this.startCron();
+
+        this.isInitialized = true;
+
+        logger.info('Medication scheduler initialized');
+    }
+
+    runInitialRecovery() {
         setTimeout(async () => {
-            const agora = timezone.now();
+            const now = dateTime.now();
 
             logger.info('Running initial missed dose recovery');
 
-            await MedicationRecoveryService.recalculateMissedDoses(agora);
+            await MedicationRecoveryService.recalculateMissedDoses(now);
         }, 5000);
+    }
 
+    startCron() {
         cron.schedule(
             '* * * * *',
             async () => {
                 try {
                     this.executionCount++;
 
-                    const agora = timezone.now();
+                    const now = dateTime.now();
 
                     logger.info(
                         {
                             execution: this.executionCount,
-                            time: agora.toISOString(),
+                            time: now.toISOString(),
                         },
                         'Medication scheduler tick',
                     );
 
-                    await this.runCycle(agora);
+                    await this.runCycle(now);
                 } catch (error) {
                     logger.error(error, 'Scheduler cycle error');
                 }
@@ -57,18 +70,16 @@ class MedicationScheduler {
                 timezone: this.timeZone,
             },
         );
-
-        this.initialized = true;
-
-        logger.info('Medication scheduler initialized');
     }
 
-    async runCycle(agora) {
-        await MedicationExpirationService.deleteExpiredMedications(agora);
+    async runCycle(now) {
+        await MedicationStatusService.markExpiredAsInactive(now);
 
-        await MedicationPendingDoseService.confirmExpiredPendingDoses(agora);
+        await MedicationExpirationService.deleteExpiredMedications(now);
 
-        await MedicationMissedDoseService.detectMissedDoses(agora);
+        await MedicationPendingDoseService.confirmExpiredPendingDoses(now);
+
+        await MedicationMissedDoseService.detectMissedDoses(now);
 
         await medicationNotificationScheduler.checkMedicationNotifications();
     }

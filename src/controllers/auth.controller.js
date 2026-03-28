@@ -2,7 +2,7 @@ import { AuthService } from '../services/auth/auth.service.js';
 import { TokenService } from '../services/auth/token.service.js';
 import { AccountDeviceRepository } from '../repositories/account-device.repository.js';
 import { AppError } from '../utils/errors/app.error.js';
-import { timezone } from '../utils/formatters/timezone.js';
+import { dateTime } from '../utils/formatters/date-time.js';
 
 export async function refreshMultiAccountToken(req, res) {
     const { refreshToken, deviceId } = req.body;
@@ -21,7 +21,7 @@ export async function refreshMultiAccountToken(req, res) {
         userId,
         deviceId,
         accessToken,
-        timezone.now(),
+        dateTime.now(),
     );
 
     return res.json({

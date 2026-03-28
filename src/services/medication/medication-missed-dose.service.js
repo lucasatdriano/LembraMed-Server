@@ -1,23 +1,60 @@
 import { MedicationRepository } from '../../repositories/medication.repository.js';
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
-import { calcularTolerancia } from '../../utils/helpers/dose-rules.helper.js';
+import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js';
+import { recalculateNextDoseTime } from '../../utils/helpers/recalculate-next-dose.helper.js';
 
 export class MedicationMissedDoseService {
-    static async detectMissedDoses(agora) {
+    static async detectMissedDoses(now, taken = false) {
         const medications = await MedicationRepository.findActive();
 
-        for (const med of medications) {
-            const nextDose = MedicationRepository.getNextDoseDate(med, agora);
-
-            const tolerancia = calcularTolerancia(
-                med.doseinterval.intervalinhours,
+        for (const medication of medications) {
+            const nextDose = MedicationRepository.getNextDoseDate(
+                medication,
+                now,
             );
 
-            const diffMinutos =
-                (agora.getTime() - nextDose.getTime()) / (60 * 1000);
+            if (!nextDose) continue;
 
-            if (diffMinutos > tolerancia) {
-                await MedicationHistoryRepository.createMissed(med.id, agora);
+            const tolerance = calculateDoseTolerance(
+                medication.doseinterval.intervalinhours,
+            );
+
+            const diffMinutes =
+                (now.getTime() - nextDose.getTime()) / (60 * 1000);
+
+            if (diffMinutes <= tolerance) continue;
+
+            const existingRecord =
+                await MedicationHistoryRepository.findByMedicationAndDoseTime(
+                    medication.id,
+                    nextDose,
+                );
+
+            if (existingRecord) {
+                continue;
+            }
+
+            const [record, created] =
+                await MedicationHistoryRepository.findOrCreate({
+                    where: {
+                        medicationid: medication.id,
+                        takendate: nextDose,
+                    },
+                    defaults: {
+                        medicationid: medication.id,
+                        takendate: nextDose,
+                        taken,
+                    },
+                });
+
+            if (created) {
+                await MedicationRepository.update(medication, {
+                    hournextdose: recalculateNextDoseTime(
+                        medication.hournextdose,
+                        medication.doseinterval.intervalinhours,
+                        now,
+                    ),
+                });
             }
         }
     }

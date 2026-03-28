@@ -20,6 +20,6 @@ router.post('/subscribe', asyncHandler(subscribe));
 router.post('/unsubscribe', asyncHandler(unsubscribe));
 router.post('/send', asyncHandler(sendNotification));
 router.get('/', asyncHandler(getNotifications));
-router.patch('/:notificationId/read', asyncHandler(markAsRead));
+router.patch('/:notificationid/read', asyncHandler(markAsRead));
 
 export default router;

@@ -79,7 +79,7 @@
 
 /**
  * @swagger
- * /devices/{deviceId}/accounts:
+ * /devices/{deviceid}/accounts:
  *   get:
  *     summary: Obtém todas as contas associadas a um dispositivo
  *     description: Retorna a lista de todas as contas de usuário logadas no dispositivo específico
@@ -107,7 +107,7 @@
 
 /**
  * @swagger
- * /devices/push-subscription:
+ * /devices/subscription:
  *   post:
  *     summary: Registra uma subscription para notificações push
  *     description: Associa uma subscription de notificação push a um usuário e dispositivo específicos
@@ -137,7 +137,7 @@
 
 /**
  * @swagger
- * /devices/{deviceId}:
+ * /devices/{deviceid}:
  *   delete:
  *     summary: Remove um dispositivo e todas as suas associações
  *     description: Remove completamente um dispositivo, revogando todos os tokens e removendo todas as contas associadas

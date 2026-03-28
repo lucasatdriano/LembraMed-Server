@@ -20,7 +20,7 @@ export default (sequelize) => {
             },
             hournextdose: {
                 type: DataTypes.TIME,
-                allowNull: false,
+                allowNull: true,
                 field: 'hournextdose',
             },
             periodstart: {
@@ -36,7 +36,7 @@ export default (sequelize) => {
             status: {
                 type: DataTypes.BOOLEAN,
                 allowNull: false,
-                defaultValue: false,
+                defaultValue: true,
                 field: 'status',
             },
             pendingconfirmation: {

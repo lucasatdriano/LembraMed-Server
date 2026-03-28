@@ -1,4 +1,5 @@
 import { NotificationService } from '../services/notification/notification.service.js';
+import { SubscriptionService } from '../services/notification/subscription.service.js';
 import { AppError } from '../utils/errors/app.error.js';
 
 export async function getVapidPublicKey(req, res) {
@@ -23,14 +24,14 @@ export async function subscribe(req, res) {
         throw new AppError('Chaves da subscription inválidas', 400);
     }
 
-    const result = await NotificationService.saveSubscription(
+    const result = await SubscriptionService.saveSubscription(
         userId,
         subscription,
     );
 
     return res.json({
         success: true,
-        message: 'Inscrição realizada com sucesso',
+        message: 'Subscription realizado com sucesso',
         subscriptionId: result.id,
     });
 }
@@ -46,7 +47,7 @@ export async function unsubscribe(req, res) {
 
     return res.json({
         success: true,
-        message: 'Inscrição removida com sucesso',
+        message: 'Subscription removido com sucesso',
     });
 }
 

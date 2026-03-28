@@ -1,18 +1,16 @@
-import { calcularProximoHorario } from './medication-time.helper.js';
+import { dateTime } from '../formatters/date-time.js';
+import { calculateNextSchedule } from './medication-time.helper.js';
 
-export const recalculateNextDose = function (
-    ultimoHorario,
-    intervaloHoras,
-    dataReferencia = null,
-) {
-    const proximaData = calcularProximoHorario(
-        ultimoHorario,
-        intervaloHoras,
-        dataReferencia,
+export const recalculateNextDoseTime = (
+    lastScheduledTime,
+    intervalInHours,
+    referenceDate = null,
+) => {
+    const nextDate = calculateNextSchedule(
+        lastScheduledTime,
+        intervalInHours,
+        referenceDate,
     );
 
-    const horas = proximaData.getHours().toString().padStart(2, '0');
-    const minutos = proximaData.getMinutes().toString().padStart(2, '0');
-
-    return `${horas}:${minutos}`;
+    return dateTime.toTimeString(nextDate);
 };

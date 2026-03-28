@@ -1,15 +1,15 @@
 import { UserRepository } from '../../repositories/user.repository.js';
 
-function generateBaseUsername(name) {
+const generateBaseUsername = (name) => {
     return name
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/\s+/g, '.')
         .replace(/[^a-zA-Z0-9.]/g, '');
-}
+};
 
-export async function generateUniqueUsername(name) {
+export const generateUniqueUsername = async (name) => {
     const baseUsername = generateBaseUsername(name);
 
     const existingUser = await UserRepository.findByUsername(baseUsername);
@@ -19,4 +19,4 @@ export async function generateUniqueUsername(name) {
     }
 
     return baseUsername;
-}
+};

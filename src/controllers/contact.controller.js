@@ -39,7 +39,7 @@ export async function createContact(req, res) {
     });
 
     if (!validation.isValid) {
-        throw new AppError('Dados inválidos', 400);
+        throw new AppError('Dados inválidos', 400, validation.errors);
     }
 
     const { normalized } = validation;
@@ -67,7 +67,7 @@ export async function updateContact(req, res) {
     const errors = validations.flatMap((v) => v.errors);
 
     if (errors.length > 0) {
-        throw new AppError('Dados inválidos', 400);
+        throw new AppError('Dados inválidos', 400, errors);
     }
 
     const updatedContact = await ContactService.updateContact(

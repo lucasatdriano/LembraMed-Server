@@ -110,4 +110,4 @@ models.MedicationHistory.belongsTo(models.Medication, {
 
 logger.debug('Database models initialized');
 
-export { sequelize, models };
+export { models };

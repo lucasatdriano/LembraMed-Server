@@ -54,40 +54,6 @@
 
 /**
  * @swagger
- * /contacts:
- *   get:
- *     summary: Obtém todos os contatos do usuário autenticado
- *     tags: [Contacts]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Número da página
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *         description: Número de itens por página
- *     responses:
- *       200:
- *         description: Lista de contatos retornada com sucesso.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ContactPagination'
- *       401:
- *         description: Usuário não autenticado.
- *       500:
- *         description: Erro ao buscar contatos.
- */
-
-/**
- * @swagger
  * /contacts/search:
  *   get:
  *     summary: Busca contatos por nome ou número de telefone

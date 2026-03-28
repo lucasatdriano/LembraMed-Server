@@ -1,10 +1,10 @@
 import { Sequelize, Op } from 'sequelize';
 import { AppError } from '../../utils/errors/app.error.js';
-import { timezone } from '../../utils/formatters/timezone.js';
-import { recalculateNextDose } from '../../utils/helpers/recalculate-next-dose.helper.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
+import { recalculateNextDoseTime } from '../../utils/helpers/recalculate-next-dose.helper.js';
 import { MedicationRepository } from '../../repositories/medication.repository.js';
 import { DoseIntervalRepository } from '../../repositories/dose-intervals.repository.js';
-import { logger } from '../../utils/logger.js';
+import { sortMedicationsByPriority } from '../../utils/helpers/sort-medications.helper.js';
 
 export class MedicationService {
     static async findMedications(userId, search, page, limit) {
@@ -38,8 +38,10 @@ export class MedicationService {
             offset,
         });
 
+        const sortedMedications = sortMedicationsByPriority(rows);
+
         return {
-            medications: rows,
+            medications: sortedMedications,
             pagination: {
                 currentPage: pageNumber,
                 totalPages: Math.ceil(count / limitNumber),
@@ -72,16 +74,11 @@ export class MedicationService {
             throw new AppError('Intervalo de dosagem inválido', 400);
         }
 
-        logger.info(
-            { hourfirstdose },
-            '[CREATE_MEDICATION] Horário da primeira dose recebido',
-        );
-
         return MedicationRepository.create({
             name: name.toLowerCase().trim(),
             hourfirstdose,
-            periodstart: timezone.startOfDay(periodstart),
-            periodend: timezone.endOfDay(periodend),
+            periodstart: dateTime.startOfDay(periodstart),
+            periodend: dateTime.endOfDay(periodend),
             userid: userId,
             doseintervalid: doseInterval.id,
             hournextdose: hourfirstdose,
@@ -119,11 +116,6 @@ export class MedicationService {
             },
         );
 
-        logger.info(
-            { medicationId },
-            '[MEDICATION_UPDATE] Medicamento atualizado com sucesso',
-        );
-
         return updatedMedication;
     }
 
@@ -154,23 +146,21 @@ export class MedicationService {
         }
 
         if (periodstart) {
-            updates.periodstart = timezone.startOfDay(periodstart);
+            updates.periodstart = dateTime.startOfDay(periodstart);
         }
 
         if (periodend) {
-            updates.periodend = timezone.endOfDay(periodend);
+            updates.periodend = dateTime.endOfDay(periodend);
         }
 
         if (hournextdose) {
             updates.hournextdose = hournextdose;
-
-            logger.info(
-                { medicationId: medication.id, hournextdose },
-                '[MEDICATION_UPDATE] Horário atualizado',
-            );
         }
 
-        if (intervalinhours) {
+        if (
+            intervalinhours &&
+            intervalinhours !== medication.doseinterval?.intervalinhours
+        ) {
             await this.applyIntervalUpdate(
                 medication,
                 intervalinhours,
@@ -188,15 +178,6 @@ export class MedicationService {
         updates,
         hournextdose,
     ) {
-        logger.info(
-            {
-                medicationId: medication.id,
-                oldInterval: medication.doseinterval?.intervalinhours,
-                newInterval: intervalinhours,
-            },
-            '[MEDICATION_UPDATE] Intervalo alterado',
-        );
-
         let doseInterval =
             await DoseIntervalRepository.findOrCreate(intervalinhours);
 
@@ -207,7 +188,7 @@ export class MedicationService {
         updates.doseintervalid = doseInterval.id;
 
         if (!hournextdose && medication.hournextdose) {
-            updates.hournextdose = recalculateNextDose(
+            updates.hournextdose = recalculateNextDoseTime(
                 medication.hournextdose,
                 intervalinhours,
             );

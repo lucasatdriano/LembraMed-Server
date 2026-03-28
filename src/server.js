@@ -15,7 +15,7 @@ import contactRoutes from './routes/contact.routes.js';
 import medicationRoutes from './routes/medication.routes.js';
 
 import { TokenService } from './services/auth/token.service.js';
-import { timezone } from './utils/formatters/timezone.js';
+import { dateTime } from './utils/formatters/date-time.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import medicationScheduler from './services/scheduler/medication.scheduler.js';
 
@@ -53,7 +53,7 @@ app.use('/medications', medicationRoutes);
 app.get('/health', (req, res) => {
     res.json({
         status: 'OK',
-        timestamp: timezone.now().toISOString(),
+        timestamp: dateTime.now().toISOString(),
         environment: process.env.NODE_ENV,
     });
 });

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { generateUniqueUsername } from '../../utils/helpers/generate-username.helper.js';
 import { TokenService } from '../auth/token.service.js';
-import { timezone } from '../../utils/formatters/timezone.js';
+import { dateTime } from '../../utils/formatters/date-time.js';
 import { UserRepository } from '../../repositories/user.repository.js';
 import { AccountDeviceRepository } from '../../repositories/account-device.repository.js';
 import { PushSubscriptionRepository } from '../../repositories/push-subscription.repository.js';
@@ -43,13 +43,13 @@ export class UserService {
             throw new Error('Senha incorreta');
         }
 
-        const device = await DeviceRepository.findOrCreateDevice(
+        await DeviceRepository.findOrCreateDevice(
             deviceId,
             deviceName?.trim() ||
-                `Dispositivo ${timezone.now().toLocaleDateString('pt-BR')}`,
+                `Dispositivo ${dateTime.now().toLocaleDateString('pt-BR')}`,
         );
 
-        await DeviceRepository.updateLastSeen(deviceId, timezone.now());
+        await DeviceRepository.updateLastSeen(deviceId, dateTime.now());
 
         const { accessToken, refreshToken } = await TokenService.generateTokens(
             user.id,
@@ -67,7 +67,7 @@ export class UserService {
                 user.id,
                 deviceId,
                 accessToken,
-                timezone.now(),
+                dateTime.now(),
             );
         }
 
