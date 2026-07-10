@@ -13,13 +13,10 @@ logger.debug(
 );
 
 const isProduction = process.env.NODE_ENV === 'production';
-const isUsingRenderDB =
-    process.env.DB_HOST && process.env.DB_HOST.includes('render.com');
 
 logger.debug(
     {
         isProduction,
-        isUsingRenderDB,
     },
     'Database environment flags',
 );
@@ -35,17 +32,16 @@ const sequelize = new Sequelize(
         logging: (sql) => {
             logger.debug({ sql }, 'SQL query executed');
         },
-        dialectOptions:
-            isProduction || isUsingRenderDB
-                ? {
-                      ssl: {
-                          require: true,
-                          rejectUnauthorized: false,
-                      },
-                  }
-                : {
-                      ssl: false,
+        dialectOptions: isProduction
+            ? {
+                  ssl: {
+                      require: true,
+                      rejectUnauthorized: false,
                   },
+              }
+            : {
+                  ssl: false,
+              },
     },
 );
 

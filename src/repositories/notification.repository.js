@@ -8,7 +8,14 @@ export class NotificationRepository {
     static findByUser(userId, limit, offset) {
         return models.Notification.findAll({
             where: { userid: userId },
-            attributes: ['id', 'title', 'message', 'sentat', 'readat'],
+            attributes: [
+                'id',
+                'title',
+                'message',
+                'sentat',
+                'readat',
+                'isread',
+            ],
             order: [['sentat', 'DESC']],
             limit,
             offset,

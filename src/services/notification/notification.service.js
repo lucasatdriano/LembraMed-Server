@@ -76,6 +76,7 @@ export class NotificationService {
 
         await notification.update({
             readat: dateTime.now(),
+            isread: true,
         });
 
         return notification;

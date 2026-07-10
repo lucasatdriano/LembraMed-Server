@@ -31,6 +31,12 @@ export default (sequelize) => {
                 allowNull: true,
                 field: 'readat',
             },
+            isread: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+                field: 'isread',
+            },
         },
         {
             timestamps: false,

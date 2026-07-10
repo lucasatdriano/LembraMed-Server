@@ -80,6 +80,8 @@
  *           type: string
  *           format: date-time
  *           nullable: true
+ *         isread:
+ *           type: boolean
  *
  *     NotificationsResponse:
  *       type: object
