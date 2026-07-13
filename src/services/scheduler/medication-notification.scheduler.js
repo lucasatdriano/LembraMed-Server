@@ -34,7 +34,15 @@ class MedicationNotificationScheduler {
 
     async processMedication(medication, now) {
         try {
-            const doseDateTime = this.buildDoseDateTime(medication, now);
+            const doseDateTime = this.getDoseDateTime(medication);
+
+            if (!doseDateTime) {
+                logger.warn(
+                    { medicationId: medication.id },
+                    'Medication has no next dose time',
+                );
+                return;
+            }
 
             const toleranceInMinutes = calculateDoseTolerance(
                 medication.doseinterval.intervalinhours,
@@ -54,6 +62,7 @@ class MedicationNotificationScheduler {
                     medication,
                     now,
                     diffInMinutes,
+                    doseDateTime,
                 );
             }
 
@@ -71,13 +80,17 @@ class MedicationNotificationScheduler {
         }
     }
 
-    buildDoseDateTime(medication, now) {
-        const [hours, minutes] = medication.hournextdose.split(':').map(Number);
+    getDoseDateTime(medication) {
+        if (!medication.hournextdose) return null;
 
-        const doseDate = new Date(now);
-        doseDate.setHours(hours, minutes, 0, 0);
+        return typeof medication.hournextdose === 'string'
+            ? new Date(medication.hournextdose)
+            : medication.hournextdose;
+    }
 
-        return doseDate;
+    getDoseTimeString(medication) {
+        const doseDate = this.getDoseDateTime(medication);
+        return doseDate ? dateTime.toTimeString(doseDate) : null;
     }
 
     calculateTimeDifferenceInMinutes(current, target) {
@@ -115,11 +128,13 @@ class MedicationNotificationScheduler {
 
         if (this.sentInitialNotifications.has(key)) return;
 
+        const doseTime = dateTime.toTimeString(doseDateTime);
+
         await NotificationService.sendMedicationReminder(
             medication.userid,
             medication.id,
             medication.name,
-            medication.hournextdose,
+            doseTime,
             'initial',
         );
 
@@ -133,7 +148,12 @@ class MedicationNotificationScheduler {
         );
     }
 
-    async handleReminderNotification(medication, now, diffInMinutes) {
+    async handleReminderNotification(
+        medication,
+        now,
+        diffInMinutes,
+        doseDateTime,
+    ) {
         const key = this.generateReminderKey(medication);
 
         if (diffInMinutes > 30) {
@@ -153,11 +173,13 @@ class MedicationNotificationScheduler {
 
         if (!shouldSend) return;
 
+        const doseTime = dateTime.toTimeString(doseDateTime);
+
         await NotificationService.sendMedicationReminder(
             medication.userid,
             medication.id,
             medication.name,
-            medication.hournextdose,
+            doseTime,
             'reminder',
         );
 
@@ -173,11 +195,13 @@ class MedicationNotificationScheduler {
 
         if (this.sentMissedNotifications.has(key)) return;
 
+        const doseTime = dateTime.toTimeString(doseDateTime);
+
         await NotificationService.sendMedicationReminder(
             medication.userid,
             medication.id,
             medication.name,
-            medication.hournextdose,
+            doseTime,
             'missed',
         );
 
@@ -217,7 +241,7 @@ class MedicationNotificationScheduler {
                     medication.userid,
                     medication.id,
                     medication.name,
-                    medication.hournextdose,
+                    '00:00',
                     'expired',
                 );
 

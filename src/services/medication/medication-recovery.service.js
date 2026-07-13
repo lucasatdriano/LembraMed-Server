@@ -1,5 +1,7 @@
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
 import { MedicationRepository } from '../../repositories/medication.repository.js';
+import { calculateNextSchedule } from '../../utils/helpers/medication-time.helper.js';
+import { logger } from '../../utils/logger.js';
 
 export class MedicationRecoveryService {
     static async recalculateMissedDoses(now) {
@@ -18,17 +20,51 @@ export class MedicationRecoveryService {
             if (intervalMs <= 0) continue;
 
             let next = new Date(lastHistory.takendate).getTime() + intervalMs;
-
             let safety = 0;
+            let createdCount = 0;
 
             while (next < now.getTime() && safety < 1000) {
-                await MedicationHistoryRepository.createMissed(
-                    medication.id,
-                    new Date(next),
-                );
+                const nextDate = new Date(next);
+
+                const existingRecord =
+                    await MedicationHistoryRepository.findByMedicationAndDoseTime(
+                        medication.id,
+                        nextDate,
+                    );
+
+                if (!existingRecord) {
+                    await MedicationHistoryRepository.createMissed(
+                        medication.id,
+                        nextDate,
+                    );
+                    createdCount++;
+                }
 
                 next += intervalMs;
                 safety++;
+            }
+
+            if (createdCount > 0) {
+                const nextDoseTime = calculateNextSchedule(
+                    medication.hournextdose,
+                    medication.doseinterval.intervalinhours,
+                    now,
+                );
+
+                await MedicationRepository.update(medication, {
+                    hournextdose: nextDoseTime,
+                    pendingconfirmation: false,
+                    pendinguntil: null,
+                });
+
+                logger.info(
+                    {
+                        medicationId: medication.id,
+                        missedDosesCreated: createdCount,
+                        nextDose: nextDoseTime,
+                    },
+                    'Recovered missed doses',
+                );
             }
         }
     }

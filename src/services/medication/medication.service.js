@@ -1,7 +1,7 @@
 import { Sequelize, Op } from 'sequelize';
 import { AppError } from '../../utils/errors/app.error.js';
 import { dateTime } from '../../utils/formatters/date-time.js';
-import { recalculateNextDoseTime } from '../../utils/helpers/recalculate-next-dose.helper.js';
+import { calculateNextSchedule } from '../../utils/helpers/medication-time.helper.js';
 import { MedicationRepository } from '../../repositories/medication.repository.js';
 import { DoseIntervalRepository } from '../../repositories/dose-intervals.repository.js';
 import { sortMedicationsByPriority } from '../../utils/helpers/sort-medications.helper.js';
@@ -74,14 +74,19 @@ export class MedicationService {
             throw new AppError('Intervalo de dosagem inválido', 400);
         }
 
+        const now = new Date();
+
+        const firstDoseDate = dateTime.toTimestamp(hourfirstdose, now);
+        const nextDoseDate = dateTime.toTimestamp(hourfirstdose, now);
+
         return MedicationRepository.create({
             name: name.toLowerCase().trim(),
-            hourfirstdose,
+            hourfirstdose: firstDoseDate,
+            hournextdose: nextDoseDate,
             periodstart: dateTime.startOfDay(periodstart),
             periodend: dateTime.endOfDay(periodend),
             userid: userId,
             doseintervalid: doseInterval.id,
-            hournextdose: hourfirstdose,
         });
     }
 
@@ -136,8 +141,14 @@ export class MedicationService {
     }
 
     static async buildMedicationUpdates(medication, data) {
-        const { name, hournextdose, periodstart, periodend, intervalinhours } =
-            data;
+        const {
+            name,
+            hourfirstdose,
+            hournextdose,
+            periodstart,
+            periodend,
+            intervalinhours,
+        } = data;
 
         const updates = {};
 
@@ -153,8 +164,15 @@ export class MedicationService {
             updates.periodend = dateTime.endOfDay(periodend);
         }
 
+        if (hourfirstdose) {
+            updates.hourfirstdose = dateTime.toTimestamp(
+                hourfirstdose,
+                medication.hourfirstdose,
+            );
+        }
+
         if (hournextdose) {
-            updates.hournextdose = hournextdose;
+            updates.hournextdose = dateTime.toTimestamp(hournextdose);
         }
 
         if (
@@ -188,10 +206,13 @@ export class MedicationService {
         updates.doseintervalid = doseInterval.id;
 
         if (!hournextdose && medication.hournextdose) {
-            updates.hournextdose = recalculateNextDoseTime(
+            const nextDoseTime = calculateNextSchedule(
                 medication.hournextdose,
                 intervalinhours,
+                new Date(),
             );
+
+            updates.hournextdose = nextDoseTime;
         }
     }
 }

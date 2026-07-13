@@ -4,7 +4,7 @@ import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js
 import { AppError } from '../../utils/errors/app.error.js';
 import { logger } from '../../utils/logger.js';
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
-import { recalculateNextDoseTime } from '../../utils/helpers/recalculate-next-dose.helper.js';
+import { calculateNextSchedule } from '../../utils/helpers/medication-time.helper.js';
 
 export class MedicationDoseService {
     static async confirmDose(medication, taken = true) {
@@ -43,9 +43,7 @@ export class MedicationDoseService {
                 taken,
             });
 
-            const takenTime = dateTime.toTimeString(now);
-
-            const nextDoseTime = recalculateNextDoseTime(
+            const nextDoseTime = calculateNextSchedule(
                 medication.hournextdose,
                 medication.doseinterval.intervalinhours,
                 now,
@@ -54,7 +52,7 @@ export class MedicationDoseService {
             await MedicationRepository.update(medication, {
                 pendingconfirmation: false,
                 pendinguntil: null,
-                lasttakentime: taken ? takenTime : null,
+                lasttakentime: now,
                 hournextdose: nextDoseTime,
             });
 
@@ -92,12 +90,10 @@ export class MedicationDoseService {
 
         const intervalInHours = medication.doseinterval.intervalinhours;
 
-        const today = dateTime.timeStringToDate(medication.hournextdose, now);
-
-        const currentDose = now.getTime() < today.getTime() ? today : today;
+        const doseDate = medication.hournextdose;
 
         const diffHours =
-            (currentDose.getTime() - now.getTime()) / (1000 * 60 * 60);
+            (doseDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
         if (diffHours > 2) {
             throw new AppError(
@@ -108,8 +104,7 @@ export class MedicationDoseService {
 
         const toleranceInMinutes = calculateDoseTolerance(intervalInHours);
 
-        const diffMinutes =
-            (now.getTime() - currentDose.getTime()) / (60 * 1000);
+        const diffMinutes = (now.getTime() - doseDate.getTime()) / (60 * 1000);
 
         if (diffMinutes > toleranceInMinutes) {
             throw new AppError('Esta dose já está perdida', 400);
@@ -125,7 +120,7 @@ export class MedicationDoseService {
             const nextAllowed =
                 new Date(lastDose.takendate).getTime() + intervalMs;
 
-            const toleranceBeforeMs = 2 * 60 * 60 * 1000; // 👈 AQUI
+            const toleranceBeforeMs = 2 * 60 * 60 * 1000;
 
             if (now.getTime() < nextAllowed - toleranceBeforeMs) {
                 const diffMs = nextAllowed - toleranceBeforeMs - now.getTime();
@@ -143,18 +138,18 @@ export class MedicationDoseService {
         }
 
         const base =
-            now.getTime() < currentDose.getTime()
-                ? currentDose.getTime()
+            now.getTime() < doseDate.getTime()
+                ? doseDate.getTime()
                 : now.getTime();
 
-        const pendingUntil = base + 3 * 60 * 1000;
+        const pendingUntil = new Date(base + 3 * 60 * 1000);
 
         await MedicationRepository.update(medication, {
             pendingconfirmation: true,
             pendinguntil: pendingUntil,
         });
 
-        const formatted = new Date(pendingUntil).toLocaleString('pt-BR', {
+        const formatted = pendingUntil.toLocaleString('pt-BR', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -164,7 +159,7 @@ export class MedicationDoseService {
 
         return {
             message: `Dose registrada até ${formatted}`,
-            pendingUntil,
+            pendingUntil: pendingUntil,
             pendingUntilFormatted: formatted,
             expiresIn: '3 minutos',
         };

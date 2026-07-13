@@ -14,12 +14,12 @@ export default (sequelize) => {
                 allowNull: false,
             },
             hourfirstdose: {
-                type: DataTypes.TIME,
+                type: DataTypes.DATE,
                 allowNull: false,
                 field: 'hourfirstdose',
             },
             hournextdose: {
-                type: DataTypes.TIME,
+                type: DataTypes.DATE,
                 allowNull: true,
                 field: 'hournextdose',
             },

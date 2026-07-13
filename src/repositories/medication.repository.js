@@ -88,15 +88,27 @@ export class MedicationRepository {
         });
     }
 
-    static getNextDoseDate(medication, now) {
+    static getNextDoseDate(medication) {
         if (!medication.hournextdose) return null;
 
-        const [hours, minutes] = medication.hournextdose.split(':').map(Number);
-
-        const doseDate = new Date(now);
-        doseDate.setHours(hours, minutes, 0, 0);
+        const doseDate =
+            typeof medication.hournextdose === 'string'
+                ? new Date(medication.hournextdose)
+                : medication.hournextdose;
 
         return doseDate;
+    }
+
+    static extractTimeFromTimestamp(timestamp) {
+        if (!timestamp) return null;
+
+        const date =
+            typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        return `${hours}:${minutes}`;
     }
 
     static create(data) {
@@ -104,6 +116,28 @@ export class MedicationRepository {
     }
 
     static update(instance, data) {
+        if (data.hournextdose instanceof Date) {
+            data.hournextdose = data.hournextdose.toISOString();
+        }
+        if (data.hourfirstdose instanceof Date) {
+            data.hourfirstdose = data.hourfirstdose.toISOString();
+        }
+        if (data.pendinguntil instanceof Date) {
+            data.pendinguntil = data.pendinguntil.toISOString();
+        }
+        if (data.updatedat instanceof Date) {
+            data.updatedat = data.updatedat.toISOString();
+        }
+        if (data.lasttakentime instanceof Date) {
+            data.lasttakentime = data.lasttakentime.toISOString();
+        }
+        if (data.periodstart instanceof Date) {
+            data.periodstart = data.periodstart.toISOString();
+        }
+        if (data.periodend instanceof Date) {
+            data.periodend = data.periodend.toISOString();
+        }
+
         return instance.update(data);
     }
 

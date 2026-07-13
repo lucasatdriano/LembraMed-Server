@@ -1,7 +1,8 @@
+/* eslint-disable unused-imports/no-unused-vars */
 import { MedicationRepository } from '../../repositories/medication.repository.js';
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
 import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js';
-import { recalculateNextDoseTime } from '../../utils/helpers/recalculate-next-dose.helper.js';
+import { calculateNextSchedule } from '../../utils/helpers/medication-time.helper.js';
 
 export class MedicationMissedDoseService {
     static async detectMissedDoses(now, taken = false) {
@@ -48,12 +49,14 @@ export class MedicationMissedDoseService {
                 });
 
             if (created) {
+                const nextDoseTime = calculateNextSchedule(
+                    medication.hournextdose,
+                    medication.doseinterval.intervalinhours,
+                    now,
+                );
+
                 await MedicationRepository.update(medication, {
-                    hournextdose: recalculateNextDoseTime(
-                        medication.hournextdose,
-                        medication.doseinterval.intervalinhours,
-                        now,
-                    ),
+                    hournextdose: nextDoseTime,
                 });
             }
         }

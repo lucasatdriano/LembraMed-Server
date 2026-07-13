@@ -1,4 +1,4 @@
-import { addDays, addHours, isAfter, isBefore } from 'date-fns';
+import { addHours, isBefore } from 'date-fns';
 import { dateTime } from '../formatters/date-time.js';
 import { AppError } from '../errors/app.error.js';
 
@@ -9,65 +9,49 @@ export const calculateNextSchedule = (
 ) => {
     const now = resolveNow(referenceDate);
 
-    if (intervalInHours >= 24 && intervalInHours % 24 === 0) {
-        return calculateDailyIntervalSchedule(
-            lastScheduledTime,
-            intervalInHours,
-            now,
-        );
+    if (!lastScheduledTime) {
+        throw new AppError('Invalid lastScheduledTime', 400);
     }
 
-    return calculateHourlyIntervalSchedule(
-        lastScheduledTime,
-        intervalInHours,
-        now,
-    );
-};
-
-const getNextTimeOccurrence = (timeString, referenceDate = null) => {
-    const now = resolveNow(referenceDate);
-
-    const todayTime = dateTime.timeStringToDate(timeString, now);
-
-    if (now <= todayTime || dateTime.isSameTime(now, todayTime)) {
-        return todayTime;
+    if (!intervalInHours || intervalInHours <= 0) {
+        throw new AppError('Invalid intervalInHours', 400);
     }
 
-    const tomorrowTime = dateTime.timeStringToDate(timeString, addDays(now, 1));
+    let nextDate =
+        typeof lastScheduledTime === 'string'
+            ? new Date(lastScheduledTime)
+            : new Date(lastScheduledTime);
 
-    return tomorrowTime;
+    while (isBefore(nextDate, now)) {
+        nextDate = addHours(nextDate, intervalInHours);
+    }
+
+    return nextDate;
 };
 
 const resolveNow = (referenceDate) => {
     return referenceDate ? dateTime.now(referenceDate) : dateTime.now();
 };
 
-const calculateDailyIntervalSchedule = (
-    lastScheduledTime,
-    intervalInHours,
-    now,
-) => {
-    const daysToAdd = intervalInHours / 24;
-
-    const nextOccurrence = getNextTimeOccurrence(lastScheduledTime, now);
-
-    return isAfter(now, nextOccurrence)
-        ? addDays(nextOccurrence, daysToAdd)
-        : nextOccurrence;
+export const extractTimeFromTimestamp = (timestamp) => {
+    if (!timestamp) return null;
+    const date =
+        typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return dateTime.format(date, 'HH:mm:ss');
 };
 
-const calculateHourlyIntervalSchedule = (
-    lastScheduledTime,
+export const calculateNextDoseFromLastTaken = (
+    lastTakenTime,
     intervalInHours,
-    now,
+    referenceDate = null,
 ) => {
-    const lastDateTime = dateTime.timeStringToDate(lastScheduledTime, now);
+    const now = resolveNow(referenceDate);
+    const lastDate =
+        typeof lastTakenTime === 'string'
+            ? new Date(lastTakenTime)
+            : lastTakenTime;
 
-    let nextDateTime = addHours(lastDateTime, intervalInHours);
-
-    if (!intervalInHours || intervalInHours <= 0) {
-        throw new AppError('Invalid intervalInHours', 400);
-    }
+    let nextDateTime = addHours(lastDate, intervalInHours);
 
     while (isBefore(nextDateTime, now)) {
         nextDateTime = addHours(nextDateTime, intervalInHours);

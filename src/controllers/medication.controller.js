@@ -52,9 +52,17 @@ export async function getMedicationHistory(req, res) {
 export async function createMedication(req, res) {
     const userId = req.user.userId;
 
-    const validation = validationMedication.medication(req.body);
+    const validation = validationMedication.validateCreate(req.body);
 
     if (!validation.isValid) {
+        logger.warn(
+            {
+                errors: validation.errors,
+                body: req.body,
+            },
+            'Validação de criação falhou',
+        );
+
         throw new AppError('Dados inválidos', 400, validation.errors);
     }
 
@@ -94,7 +102,7 @@ export async function updateMedication(req, res) {
     const { medicationid } = req.params;
     const userId = req.user.userId;
 
-    const validation = validationMedication.medication(req.body, true);
+    const validation = validationMedication.validateUpdate(req.body);
 
     if (!validation.isValid) {
         logger.warn(

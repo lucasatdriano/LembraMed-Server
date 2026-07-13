@@ -1,4 +1,48 @@
 export const validationMedication = {
+    timestamp(value, fieldName = 'Horário') {
+        const errors = [];
+
+        if (!value) {
+            errors.push(`${fieldName} é obrigatório`);
+            return { isValid: false, errors, normalized: null };
+        }
+
+        if (
+            typeof value === 'string' &&
+            value.includes(':') &&
+            !value.includes('T')
+        ) {
+            const timeValidation = this.time(value);
+            errors.push(...timeValidation.errors);
+        } else if (typeof value === 'string') {
+            const isoRegex =
+                /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+
+            if (!isoRegex.test(value)) {
+                errors.push(
+                    `Formato de ${fieldName.toLowerCase()} inválido. Use ISO format (YYYY-MM-DDTHH:mm:ss)`,
+                );
+            } else {
+                const date = new Date(value);
+                if (isNaN(date.getTime())) {
+                    errors.push(`${fieldName} inválido`);
+                }
+            }
+        } else if (value instanceof Date) {
+            if (isNaN(value.getTime())) {
+                errors.push(`${fieldName} inválido`);
+            }
+        } else {
+            errors.push(`${fieldName} deve ser uma data/hora válida`);
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors,
+            normalized: value,
+        };
+    },
+
     time(time) {
         const errors = [];
 
@@ -135,9 +179,20 @@ export const validationMedication = {
         const nameValidation = this.name(data.name);
         errors.push(...nameValidation.errors);
 
-        if (!isUpdate || data.hournextdose || data.hourfirstdose) {
-            const timeValidation = this.time(
-                data.hourfirstdose ?? data.hournextdose,
+        if (data.hourfirstdose) {
+            const timeValidation = this.timestamp(
+                data.hourfirstdose,
+                'Horário da primeira dose',
+            );
+            errors.push(...timeValidation.errors);
+        } else if (!isUpdate) {
+            errors.push('Horário da primeira dose é obrigatório');
+        }
+
+        if (data.hournextdose) {
+            const timeValidation = this.timestamp(
+                data.hournextdose,
+                'Próximo horário',
             );
             errors.push(...timeValidation.errors);
         }
@@ -146,7 +201,6 @@ export const validationMedication = {
         errors.push(...intervalValidation.errors);
 
         let periodNormalized = null;
-
         if (data.periodstart || data.periodend) {
             const periodValidation = this.period(
                 data.periodstart,
@@ -171,5 +225,62 @@ export const validationMedication = {
                 ...periodNormalized,
             },
         };
+    },
+
+    validateCreate(data) {
+        return this.medication(data, false);
+    },
+
+    validateUpdate(data) {
+        return this.medication(data, true);
+    },
+
+    isFutureTimestamp(timestamp) {
+        if (!timestamp)
+            return { isValid: false, message: 'Timestamp é obrigatório' };
+
+        const date =
+            typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+        const now = new Date();
+
+        if (isNaN(date.getTime())) {
+            return { isValid: false, message: 'Timestamp inválido' };
+        }
+
+        if (date < now) {
+            return { isValid: false, message: 'Data/hora deve ser no futuro' };
+        }
+
+        return { isValid: true };
+    },
+
+    isWithinPeriod(timestamp, periodStart, periodEnd) {
+        if (!timestamp)
+            return { isValid: false, message: 'Timestamp é obrigatório' };
+
+        const date =
+            typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+        const start = periodStart ? new Date(periodStart) : null;
+        const end = periodEnd ? new Date(periodEnd) : null;
+
+        if (isNaN(date.getTime())) {
+            return { isValid: false, message: 'Timestamp inválido' };
+        }
+
+        if (start && date < start) {
+            return {
+                isValid: false,
+                message: 'Data/hora anterior ao início do período',
+            };
+        }
+
+        if (end && date > end) {
+            return {
+                isValid: false,
+                message: 'Data/hora posterior ao fim do período',
+            };
+        }
+
+        return { isValid: true };
     },
 };

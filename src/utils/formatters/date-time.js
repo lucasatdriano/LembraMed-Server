@@ -58,4 +58,58 @@ export const dateTime = {
 
         return date;
     },
+
+    toTimestamp(value, referenceDate = null) {
+        if (!value) return null;
+
+        if (value instanceof Date) return value;
+
+        if (typeof value === 'string' && value.includes('T')) {
+            return new Date(value);
+        }
+
+        if (typeof value === 'string' && value.includes(':')) {
+            const base = referenceDate ? new Date(referenceDate) : this.now();
+            return this.timeStringToDate(value, base);
+        }
+
+        if (typeof value === 'number') {
+            return new Date(value);
+        }
+
+        return new Date(value);
+    },
+
+    toISO(value) {
+        if (!value) return null;
+
+        const date = value instanceof Date ? value : new Date(value);
+
+        if (isNaN(date.getTime())) return null;
+
+        return date.toISOString();
+    },
+
+    toISOWithTimezone(value) {
+        if (!value) return null;
+
+        const date = value instanceof Date ? value : new Date(value);
+
+        if (isNaN(date.getTime())) return null;
+
+        return formatWithTimezone(date, "yyyy-MM-dd'T'HH:mm:ssXXX", {
+            timeZone: TIMEZONE,
+        });
+    },
+
+    extractTime(timestamp) {
+        if (!timestamp) return null;
+
+        const date =
+            typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+
+        if (isNaN(date.getTime())) return null;
+
+        return this.toTimeString(date);
+    },
 };
