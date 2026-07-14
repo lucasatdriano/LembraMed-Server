@@ -1,4 +1,3 @@
-/* eslint-disable unused-imports/no-unused-vars */
 import { MedicationRepository } from '../../repositories/medication.repository.js';
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
 import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js';
@@ -31,11 +30,7 @@ export class MedicationMissedDoseService {
                     nextDose,
                 );
 
-            if (existingRecord) {
-                continue;
-            }
-
-            const [record, created] =
+            if (!existingRecord) {
                 await MedicationHistoryRepository.findOrCreate({
                     where: {
                         medicationid: medication.id,
@@ -47,14 +42,18 @@ export class MedicationMissedDoseService {
                         taken,
                     },
                 });
+            }
 
-            if (created) {
-                const nextDoseTime = calculateNextSchedule(
-                    medication.hournextdose,
-                    medication.doseinterval.intervalinhours,
-                    now,
-                );
+            const nextDoseTime = calculateNextSchedule(
+                medication.hournextdose,
+                medication.doseinterval.intervalinhours,
+                now,
+            );
 
+            if (
+                nextDoseTime.getTime() !==
+                new Date(medication.hournextdose).getTime()
+            ) {
                 await MedicationRepository.update(medication, {
                     hournextdose: nextDoseTime,
                 });

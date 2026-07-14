@@ -1,5 +1,6 @@
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
 import { MedicationRepository } from '../../repositories/medication.repository.js';
+import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js';
 import { calculateNextSchedule } from '../../utils/helpers/medication-time.helper.js';
 import { logger } from '../../utils/logger.js';
 
@@ -20,10 +21,15 @@ export class MedicationRecoveryService {
             if (intervalMs <= 0) continue;
 
             let next = new Date(lastHistory.takendate).getTime() + intervalMs;
-            let safety = 0;
             let createdCount = 0;
 
-            while (next < now.getTime() && safety < 1000) {
+            const tolerance = calculateDoseTolerance(
+                medication.doseinterval.intervalinhours,
+            );
+
+            const toleranceMs = tolerance * 60 * 1000;
+
+            while (next + toleranceMs < now.getTime()) {
                 const nextDate = new Date(next);
 
                 const existingRecord =
@@ -41,7 +47,6 @@ export class MedicationRecoveryService {
                 }
 
                 next += intervalMs;
-                safety++;
             }
 
             if (createdCount > 0) {
