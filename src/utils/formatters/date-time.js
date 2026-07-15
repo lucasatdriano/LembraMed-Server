@@ -24,6 +24,18 @@ export const dateTime = {
         return endOfDayFns(parsed);
     },
 
+    format(date, formatStr = 'yyyy-MM-dd HH:mm:ss') {
+        if (!date) return null;
+
+        const parsed = date instanceof Date ? date : new Date(date);
+
+        if (isNaN(parsed.getTime())) return null;
+
+        return formatWithTimezone(parsed, formatStr, {
+            timeZone: TIMEZONE,
+        });
+    },
+
     toTimeString(date) {
         if (!date) return null;
 

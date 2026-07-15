@@ -30,10 +30,6 @@ export const sortMedicationsByPriority = (
         return [];
     }
 
-    // const currentHour = currentDate.getHours();
-    // const currentMinute = currentDate.getMinutes();
-    // const currentTotalMinutes = currentHour * 60 + currentMinute;
-
     return [...medications].sort((a, b) => {
         const aFinished = !a.status;
         const bFinished = !b.status;

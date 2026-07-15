@@ -29,17 +29,6 @@ export const calculateNextSchedule = (
     return nextDate;
 };
 
-const resolveNow = (referenceDate) => {
-    return referenceDate ? dateTime.now(referenceDate) : dateTime.now();
-};
-
-export const extractTimeFromTimestamp = (timestamp) => {
-    if (!timestamp) return null;
-    const date =
-        typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-    return dateTime.format(date, 'HH:mm:ss');
-};
-
 export const calculateNextDoseFromLastTaken = (
     lastTakenTime,
     intervalInHours,
@@ -51,6 +40,7 @@ export const calculateNextDoseFromLastTaken = (
             ? new Date(lastTakenTime)
             : lastTakenTime;
 
+    // Adiciona o intervalo a partir da última dose tomada
     let nextDateTime = addHours(lastDate, intervalInHours);
 
     while (isBefore(nextDateTime, now)) {
@@ -58,4 +48,15 @@ export const calculateNextDoseFromLastTaken = (
     }
 
     return nextDateTime;
+};
+
+const resolveNow = (referenceDate) => {
+    return referenceDate ? dateTime.now(referenceDate) : dateTime.now();
+};
+
+export const extractTimeFromTimestamp = (timestamp) => {
+    if (!timestamp) return null;
+    const date =
+        typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return dateTime.format(date, 'HH:mm:ss');
 };

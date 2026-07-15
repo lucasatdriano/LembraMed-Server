@@ -4,7 +4,7 @@ import { calculateDoseTolerance } from '../../utils/helpers/dose-rules.helper.js
 import { AppError } from '../../utils/errors/app.error.js';
 import { logger } from '../../utils/logger.js';
 import { MedicationHistoryRepository } from '../../repositories/medication-history.repository.js';
-import { calculateNextSchedule } from '../../utils/helpers/medication-time.helper.js';
+import { calculateNextDoseFromLastTaken } from '../../utils/helpers/medication-time.helper.js';
 
 export class MedicationDoseService {
     static async confirmDose(medication, taken = true) {
@@ -18,11 +18,10 @@ export class MedicationDoseService {
         const now = dateTime.now();
 
         try {
-            const nextDoseDate = MedicationRepository.getNextDoseDate(
-                medication,
-                now,
-            );
+            // Busca a data da dose que está sendo confirmada
+            const doseDate = medication.hournextdose;
 
+            // Verifica se já existe histórico recente para esta dose
             const recent =
                 await MedicationHistoryRepository.findRecentByMedication(
                     medication.id,
@@ -30,21 +29,32 @@ export class MedicationDoseService {
                 );
 
             if (recent) {
-                logger.warn(
-                    { medicationId: medication.id },
-                    'Recent history already exists, skipping duplicate',
+                const doseDateStr = dateTime.format(
+                    doseDate,
+                    'yyyy-MM-dd HH:mm:ss',
                 );
-                return;
+                const recentDateStr = dateTime.format(
+                    recent.takendate,
+                    'yyyy-MM-dd HH:mm:ss',
+                );
+
+                if (doseDateStr === recentDateStr) {
+                    logger.warn(
+                        { medicationId: medication.id, doseDate: doseDateStr },
+                        'Dose already recorded, skipping duplicate',
+                    );
+                    return;
+                }
             }
 
             await MedicationHistoryRepository.create({
                 medicationid: medication.id,
-                takendate: nextDoseDate,
+                takendate: doseDate,
                 taken,
             });
 
-            const nextDoseTime = calculateNextSchedule(
-                medication.hournextdose,
+            const nextDoseTime = calculateNextDoseFromLastTaken(
+                doseDate,
                 medication.doseinterval.intervalinhours,
                 now,
             );
@@ -57,7 +67,7 @@ export class MedicationDoseService {
             });
 
             logger.info(
-                { medicationId: medication.id },
+                { medicationId: medication.id, nextDoseTime },
                 'CONFIRM_DOSE success',
             );
         } catch (error) {
@@ -92,19 +102,16 @@ export class MedicationDoseService {
 
         const doseDate = medication.hournextdose;
 
-        const diffHours =
-            (doseDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+        const diffMinutes = (doseDate.getTime() - now.getTime()) / (60 * 1000);
 
-        if (diffHours > 2) {
+        if (diffMinutes > 15) {
             throw new AppError(
-                'Você só pode marcar a dose até 2 horas antes.',
+                'Você só pode marcar a dose até 15 minutos antes.',
                 400,
             );
         }
 
         const toleranceInMinutes = calculateDoseTolerance(intervalInHours);
-
-        const diffMinutes = (now.getTime() - doseDate.getTime()) / (60 * 1000);
 
         if (diffMinutes > toleranceInMinutes) {
             throw new AppError('Esta dose já está perdida', 400);
