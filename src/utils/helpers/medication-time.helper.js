@@ -40,7 +40,6 @@ export const calculateNextDoseFromLastTaken = (
             ? new Date(lastTakenTime)
             : lastTakenTime;
 
-    // Adiciona o intervalo a partir da última dose tomada
     let nextDateTime = addHours(lastDate, intervalInHours);
 
     while (isBefore(nextDateTime, now)) {
