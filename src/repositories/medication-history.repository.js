@@ -37,7 +37,24 @@ export class MedicationHistoryRepository {
         return models.MedicationHistory.findOne({
             where: {
                 medicationid: medicationId,
-                takendate: {
+                scheduleddate: {
+                    [Op.between]: [startOfMinute, endOfMinute],
+                },
+            },
+        });
+    }
+
+    static async findByScheduledDate(medicationId, scheduledDate) {
+        const startOfMinute = new Date(scheduledDate);
+        startOfMinute.setSeconds(0, 0);
+
+        const endOfMinute = new Date(scheduledDate);
+        endOfMinute.setSeconds(59, 999);
+
+        return models.MedicationHistory.findOne({
+            where: {
+                medicationid: medicationId,
+                scheduleddate: {
                     [Op.between]: [startOfMinute, endOfMinute],
                 },
             },
@@ -52,11 +69,24 @@ export class MedicationHistoryRepository {
         return models.MedicationHistory.create(data);
     }
 
-    static createMissed(medicationId, date) {
+    static createMissed(medicationId, scheduledDate) {
         return models.MedicationHistory.create({
             medicationid: medicationId,
-            takendate: date,
+            takendate: null,
+            scheduleddate: scheduledDate,
             taken: false,
+        });
+    }
+
+    static findByDateRange(medicationId, startDate, endDate) {
+        return models.MedicationHistory.findAll({
+            where: {
+                medicationid: medicationId,
+                scheduleddate: {
+                    [Op.between]: [startDate, endDate],
+                },
+            },
+            order: [['scheduleddate', 'ASC']],
         });
     }
 }

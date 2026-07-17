@@ -18,10 +18,8 @@ export class MedicationDoseService {
         const now = dateTime.now();
 
         try {
-            // Busca a data da dose que está sendo confirmada
             const doseDate = medication.hournextdose;
 
-            // Verifica se já existe histórico recente para esta dose
             const recent =
                 await MedicationHistoryRepository.findRecentByMedication(
                     medication.id,
@@ -34,7 +32,7 @@ export class MedicationDoseService {
                     'yyyy-MM-dd HH:mm:ss',
                 );
                 const recentDateStr = dateTime.format(
-                    recent.takendate,
+                    recent.scheduleddate,
                     'yyyy-MM-dd HH:mm:ss',
                 );
 
@@ -49,7 +47,7 @@ export class MedicationDoseService {
 
             await MedicationHistoryRepository.create({
                 medicationid: medication.id,
-                takendate: doseDate,
+                scheduleddate: doseDate,
                 taken,
             });
 
@@ -125,7 +123,7 @@ export class MedicationDoseService {
             const intervalMs = intervalInHours * 60 * 60 * 1000;
 
             const nextAllowed =
-                new Date(lastDose.takendate).getTime() + intervalMs;
+                new Date(lastDose.scheduleddate).getTime() + intervalMs;
 
             const toleranceBeforeMs = 2 * 60 * 60 * 1000;
 

@@ -19,11 +19,12 @@ export class MedicationHistoryService {
         const where = { medicationid: medicationId };
 
         if (startDate || endDate) {
-            where.takendate = {};
+            where.scheduleddate = {};
 
-            if (startDate) where.takendate[Op.gte] = dateTime.now(startDate);
+            if (startDate)
+                where.scheduleddate[Op.gte] = dateTime.now(startDate);
 
-            if (endDate) where.takendate[Op.lte] = dateTime.now(endDate);
+            if (endDate) where.scheduleddate[Op.lte] = dateTime.now(endDate);
         }
 
         if (doseStatus && doseStatus !== 'all') {
@@ -36,7 +37,7 @@ export class MedicationHistoryService {
         const { count, rows } =
             await MedicationHistoryRepository.findAndCountAll({
                 where,
-                order: [['takendate', 'DESC']],
+                order: [['scheduleddate', 'DESC']],
                 limit: limitNumber,
                 offset: (pageNumber - 1) * limitNumber,
             });

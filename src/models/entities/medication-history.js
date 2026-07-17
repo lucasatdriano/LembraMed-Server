@@ -29,6 +29,11 @@ export default (sequelize) => {
                 defaultValue: sequelize.fn('NOW'),
                 field: 'takendate',
             },
+            scheduleddate: {
+                type: DataTypes.DATE,
+                allowNull: false,
+                field: 'scheduleddate',
+            },
             createdat: {
                 type: DataTypes.DATE,
                 defaultValue: sequelize.fn('NOW'),

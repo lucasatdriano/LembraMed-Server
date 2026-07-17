@@ -20,7 +20,8 @@ export class MedicationRecoveryService {
 
             if (intervalMs <= 0) continue;
 
-            let next = new Date(lastHistory.takendate).getTime() + intervalMs;
+            let next =
+                new Date(lastHistory.scheduleddate).getTime() + intervalMs;
             let createdCount = 0;
 
             const tolerance = calculateDoseTolerance(

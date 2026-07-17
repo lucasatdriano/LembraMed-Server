@@ -129,7 +129,7 @@ export const isTodaysDoseTaken = (
         (history) =>
             history.medicationid === medicationId &&
             history.taken === true &&
-            isAfter(history.takendate, today) &&
-            isBefore(history.takendate, tomorrow),
+            isAfter(history.scheduleddate, today) &&
+            isBefore(history.scheduleddate, tomorrow),
     );
 };

@@ -34,11 +34,11 @@ export class MedicationMissedDoseService {
                 await MedicationHistoryRepository.findOrCreate({
                     where: {
                         medicationid: medication.id,
-                        takendate: nextDose,
+                        scheduleddate: nextDose,
                     },
                     defaults: {
                         medicationid: medication.id,
-                        takendate: nextDose,
+                        scheduleddate: nextDose,
                         taken,
                     },
                 });
