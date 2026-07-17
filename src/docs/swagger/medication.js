@@ -50,6 +50,65 @@
  *             intervalinhours:
  *               type: number
  *
+ *     MedicationHistory:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: ID único do registro
+ *         medicationid:
+ *           type: string
+ *           format: uuid
+ *           description: ID do medicamento
+ *         taken:
+ *           type: boolean
+ *           description: Indica se a dose foi tomada (true) ou perdida (false)
+ *         takendate:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: Data/hora REAL em que o usuário tomou a medicação (preenchido automaticamente pelo sistema)
+ *         scheduleddate:
+ *           type: string
+ *           format: date-time
+ *           description: Data/hora PROGRAMADA para a dose ser tomada
+ *         createdat:
+ *           type: string
+ *           format: date-time
+ *           description: Data de criação do registro
+ *
+ *     MedicationHistoryWithStatus:
+ *       allOf:
+ *         - $ref: '#/components/schemas/MedicationHistory'
+ *         - type: object
+ *           properties:
+ *             delayMinutes:
+ *               type: number
+ *               nullable: true
+ *               description: Atraso em minutos (takendate - scheduleddate). Positivo = atrasado, Negativo = adiantado, null = não tomou
+ *             isOnTime:
+ *               type: boolean
+ *               nullable: true
+ *               description: Se a dose foi tomada no horário (considerando até 5min de atraso)
+ *
+ *     MedicationHistoryListResponse:
+ *       type: object
+ *       properties:
+ *         history:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/MedicationHistoryWithStatus'
+ *         pagination:
+ *           type: object
+ *           properties:
+ *             currentPage:
+ *               type: integer
+ *             totalPages:
+ *               type: integer
+ *             totalRecords:
+ *               type: integer
+ *
  *     CreateMedicationRequest:
  *       type: object
  *       required:
@@ -172,6 +231,11 @@
  * /medications/{medicationid}/history:
  *   get:
  *     summary: Histórico do medicamento
+ *     description: |
+ *       Retorna o histórico de doses do medicamento.
+ *       - **takendate**: Horário REAL que o usuário tomou (preenchido automaticamente)
+ *       - **scheduleddate**: Horário PROGRAMADO para a dose
+ *       - **delayMinutes**: Atraso em minutos (calculado)
  *     tags: [Medications]
  *     security:
  *       - BearerAuth: []
@@ -187,16 +251,19 @@
  *         schema:
  *           type: string
  *           format: date
+ *         description: Data inicial para filtrar (filtra por scheduleddate)
  *       - in: query
  *         name: endDate
  *         schema:
  *           type: string
  *           format: date
+ *         description: Data final para filtrar (filtra por scheduleddate)
  *       - in: query
- *         name: status
+ *         name: doseStatus
  *         schema:
  *           type: string
  *           enum: [taken, missed, all]
+ *         description: Filtra por status da dose (taken=tomou, missed=perdeu)
  *       - in: query
  *         name: page
  *         schema:
@@ -209,7 +276,13 @@
  *           default: 20
  *     responses:
  *       200:
- *         description: Histórico retornado
+ *         description: Histórico retornado com dados de horário programado e real
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MedicationHistoryListResponse'
+ *       404:
+ *         description: Medicamento não encontrado
  */
 
 /**
