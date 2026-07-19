@@ -38,6 +38,7 @@ export class MedicationMissedDoseService {
                     },
                     defaults: {
                         medicationid: medication.id,
+                        takendate: null,
                         scheduleddate: nextDose,
                         taken,
                     },

@@ -26,7 +26,6 @@ export default (sequelize) => {
             takendate: {
                 type: DataTypes.DATE,
                 allowNull: true,
-                defaultValue: sequelize.fn('NOW'),
                 field: 'takendate',
             },
             scheduleddate: {

@@ -47,6 +47,7 @@ export class MedicationDoseService {
 
             await MedicationHistoryRepository.create({
                 medicationid: medication.id,
+                takendate: new Date(),
                 scheduleddate: doseDate,
                 taken,
             });
