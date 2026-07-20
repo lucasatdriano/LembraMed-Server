@@ -14,19 +14,15 @@
  *       properties:
  *         endpoint:
  *           type: string
- *           example: "https://fcm.googleapis.com/fcm/send/abc123"
  *         deviceId:
  *           type: string
- *           example: "device-xyz"
  *         keys:
  *           type: object
  *           properties:
  *             p256dh:
  *               type: string
- *               example: "BNcRdre..."
  *             auth:
  *               type: string
- *               example: "abc123"
  *       required:
  *         - endpoint
  *         - keys
@@ -51,7 +47,6 @@
  *       properties:
  *         success:
  *           type: boolean
- *           example: true
  *         notificationId:
  *           type: string
  *           format: uuid
@@ -88,7 +83,6 @@
  *       properties:
  *         success:
  *           type: boolean
- *           example: true
  *         notifications:
  *           type: array
  *           items:
@@ -139,7 +133,6 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Subscription realizado com sucesso"
@@ -164,7 +157,6 @@
  *             properties:
  *               endpoint:
  *                 type: string
- *                 example: "https://fcm.googleapis.com/fcm/send/abc123"
  *             required:
  *               - endpoint
  *     responses:
@@ -177,7 +169,6 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Subscription removido com sucesso"
@@ -266,7 +257,6 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Notificação marcada como lida"

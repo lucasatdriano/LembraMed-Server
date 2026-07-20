@@ -57,7 +57,6 @@
  *       properties:
  *         success:
  *           type: boolean
- *           example: true
  *         message:
  *           type: string
  *           example: "Subscription registrada com sucesso"
@@ -70,7 +69,6 @@
  *       properties:
  *         success:
  *           type: boolean
- *           example: true
  *         accounts:
  *           type: array
  *           items:
@@ -162,7 +160,6 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Dispositivo removido"

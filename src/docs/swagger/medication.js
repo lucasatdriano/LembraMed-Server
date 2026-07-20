@@ -19,10 +19,8 @@
  *           type: string
  *         hourfirstdose:
  *           type: string
- *           example: "08:00"
  *         hournextdose:
  *           type: string
- *           example: "16:00"
  *         periodstart:
  *           type: string
  *           format: date
@@ -68,29 +66,16 @@
  *           type: string
  *           format: date-time
  *           nullable: true
- *           description: Data/hora REAL em que o usuário tomou a medicação (preenchido automaticamente pelo sistema)
+ *           description: Data/hora real em que o usuário tomou a medicação
  *         scheduleddate:
  *           type: string
  *           format: date-time
- *           description: Data/hora PROGRAMADA para a dose ser tomada
+ *           description: Data/hora programada para a dose ser tomada
  *         createdat:
  *           type: string
  *           format: date-time
  *           description: Data de criação do registro
  *
- *     MedicationHistoryWithStatus:
- *       allOf:
- *         - $ref: '#/components/schemas/MedicationHistory'
- *         - type: object
- *           properties:
- *             delayMinutes:
- *               type: number
- *               nullable: true
- *               description: Atraso em minutos (takendate - scheduleddate). Positivo = atrasado, Negativo = adiantado, null = não tomou
- *             isOnTime:
- *               type: boolean
- *               nullable: true
- *               description: Se a dose foi tomada no horário (considerando até 5min de atraso)
  *
  *     MedicationHistoryListResponse:
  *       type: object
@@ -98,7 +83,7 @@
  *         history:
  *           type: array
  *           items:
- *             $ref: '#/components/schemas/MedicationHistoryWithStatus'
+ *             $ref: '#/components/schemas/MedicationHistory'
  *         pagination:
  *           type: object
  *           properties:
@@ -122,7 +107,6 @@
  *           type: string
  *         hourfirstdose:
  *           type: string
- *           example: "08:00"
  *         periodstart:
  *           type: string
  *           format: date

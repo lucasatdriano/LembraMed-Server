@@ -15,7 +15,6 @@
  *         email:
  *           type: string
  *           format: email
- *           example: usuario@example.com
  *       required:
  *         - email
  *
@@ -24,7 +23,6 @@
  *       properties:
  *         token:
  *           type: string
- *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       required:
  *         - token
  *
@@ -34,7 +32,6 @@
  *         newPassword:
  *           type: string
  *           format: password
- *           example: "NovaSenha123!"
  *       required:
  *         - newPassword
  *
@@ -43,11 +40,9 @@
  *       properties:
  *         refreshToken:
  *           type: string
- *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *         deviceId:
  *           type: string
  *           format: uuid
- *           example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  *       required:
  *         - refreshToken
  *         - deviceId
@@ -57,13 +52,10 @@
  *       properties:
  *         success:
  *           type: boolean
- *           example: true
  *         accessToken:
  *           type: string
- *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *         refreshToken:
  *           type: string
- *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  */
 
 /**

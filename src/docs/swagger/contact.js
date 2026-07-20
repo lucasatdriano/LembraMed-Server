@@ -24,11 +24,6 @@
  *         userid:
  *           type: string
  *           description: ID do usuário ao qual o contato pertence.
- *       example:
- *         id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
- *         name: "João Silva"
- *         numberphone: "11987654321"
- *         userid: "f45bb13c-55cc-4219-a457-0e12b2c3d477"
  *
  *     ContactPagination:
  *       type: object

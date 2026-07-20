@@ -29,12 +29,6 @@
  *           type: string
  *           format: date-time
  *           description: Data de criação do usuário.
- *       example:
- *         id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
- *         name: "João Silva"
- *         username: "joaosilva1"
- *         password: "senha123"
- *         createdat: "2024-01-15T10:30:00.000Z"
  *
  *     LoginMultiAccountRequest:
  *       type: object
@@ -62,7 +56,6 @@
  *       properties:
  *         success:
  *           type: boolean
- *           example: true
  *         user:
  *           type: object
  *           properties:
@@ -205,7 +198,6 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Conta removida do dispositivo"
