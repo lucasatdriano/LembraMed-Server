@@ -21,6 +21,7 @@ services:
         ports:
             - '3000:3000'
         environment:
+            - NODE_ENV=${NODE_ENV}
             - PORT=${PORT}
             - DB_HOST=${DB_HOST}
             - DB_PORT=${DB_PORT}
@@ -31,7 +32,6 @@ services:
             - JWT_SECRET=${JWT_SECRET}
             - EMAIL_USER=${EMAIL_USER}
             - EMAIL_PASS=${EMAIL_PASS}
-            - NODE_ENV=${NODE_ENV}
         volumes:
             - .:/app
         command: 'npm run dev'
